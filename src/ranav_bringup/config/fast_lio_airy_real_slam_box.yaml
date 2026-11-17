@@ -1,0 +1,20 @@
+# Mount of the real Airy in the slam box (legged_unitree_description urdf/common/slam_box.xacro), laid over
+# fast_lio_airy_real.yaml by fast_lio_slam_launch.xml lidar:=real slam_box:=true: only the keys of the mount.
+# In the box the Airy is pitched p = 5 deg forward (about y, dome leaning to +x; the top plate of NewSlamBox.step), so
+# by the rule of fast_lio_airy_real.yaml:
+#   extrinsic_R = Ry(p)
+#   imu_R = Ry(p) * R(q), R(q) the imu_R of fast_lio_airy_real.yaml (DIFOP quaternion of SN 3009BEA00377)
+# A different Airy unit has its own R(q): recompute imu_R from its DIFOP quaternion.
+# body_in_base: the rslidar origin (center of the Airy base) in base, from robot.xacro and slam_box.xacro:
+#   x = slam_box_mount_x + slam_box_airy_x = -0.25045 + 0.0037, z = slam_box_mount_z + slam_box_airy_z = 0.056 + 0.1016
+/**:
+    ros__parameters:
+        mapping:
+            extrinsic_R: [0.996195, 0.0, 0.087156,
+                          0.0,      1.0, 0.0,
+                          -0.087156, 0.0, 0.996195]
+            imu_R: [0.002219, -0.996156, -0.087569,
+                    -0.999921, -0.001124, -0.012544,
+                    0.012397, 0.087590, -0.996079]
+        frames:
+            body_in_base: [-0.24675, 0.0, 0.1576]

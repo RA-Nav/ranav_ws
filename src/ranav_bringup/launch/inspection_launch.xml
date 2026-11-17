@@ -1,0 +1,55 @@
+<launch>
+  <!-- The inspections in one command, after the simulation and the controller, with the robot standing still at the
+       spawn of the exploration whose map they use (optimized_map.pcd in save_data/ of map_generator). It includes:
+       - fast_lio_slam_launch.xml with pgo:=false: FAST-LIO and people perception. SC-PGO is left out: an inspection
+         does not use it, and it empties save_data/Scans/ (the keyframes of the exploration) when it starts;
+       - localization_launch.xml: the robot in that map (camera_init -> global_map);
+       - far_planner_launch.xml: terrain maps, far_planner, the goal bridge and the inspection goals, with its rviz;
+       - with picker, map_generator map_point_picker.py: pick the points on http://localhost:8765, then Start
+         inspection. After the last point it waits for the next start.
+       The arguments of far_planner_launch.xml can be given here too (auto_start, goals_file, dwell_time, loop,
+       people_free, ...). Each include is in a group: its arguments (rviz) would otherwise stay set for the rest. -->
+  <arg name="lidar" default="sim" description="sim: the simulated Airy of Gazebo. real: the real Airy (its driver is started too), wall clock">
+    <choice value="sim"/>
+    <choice value="real"/>
+  </arg>
+  <arg name="slam_box" default="false" description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount for FAST-LIO and its height for the terrain nodes (fast_lio_slam_launch.xml, far_planner_launch.xml)"/>
+  <arg name="use_sim_time" default="$(eval &quot;'$(var lidar)' == 'sim'&quot;)" description="Default: true with lidar:=sim, false with lidar:=real"/>
+  <arg name="people" default="true" description="Detect and track people (fast_lio_slam_launch.xml): OptiPessi avoids them, far_planner plans without them (people_free)"/>
+  <arg name="tracker" default="people_tracker" description="With people: who tracks the people OptiPessi keeps out of: people_tracker (people_perception) or autoware (autoware_multi_object_tracker, with ranav_mission opti_pessi_obstacle_bridge), see fast_lio_slam_launch.xml"/>
+  <arg name="map" default="$(find-pkg-share map_generator)/save_data/optimized_map.pcd" description="Map of the exploration (.pcd), for the localization and the picker"/>
+  <arg name="picker" default="true" description="Run the map point picker (http://localhost:8765)"/>
+  <arg name="rviz" default="true"/>
+
+  <group>
+    <include file="$(find-pkg-share ranav_bringup)/launch/fast_lio_slam_launch.xml">
+      <arg name="lidar" value="$(var lidar)"/>
+      <arg name="slam_box" value="$(var slam_box)"/>
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="pgo" value="false"/>
+      <arg name="people" value="$(var people)"/>
+      <arg name="tracker" value="$(var tracker)"/>
+      <arg name="rviz" value="false"/>
+    </include>
+  </group>
+
+  <group>
+    <include file="$(find-pkg-share ranav_bringup)/launch/localization_launch.xml">
+      <arg name="map" value="$(var map)"/>
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="rviz" value="false"/>
+    </include>
+  </group>
+
+  <group>
+    <include file="$(find-pkg-share ranav_bringup)/launch/far_planner_launch.xml">
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="slam_box" value="$(var slam_box)"/>
+      <arg name="rviz" value="$(var rviz)"/>
+    </include>
+  </group>
+
+  <!-- an executable, not a node: the picker parses its own arguments and refuses the ROS ones a node gets -->
+  <executable if="$(var picker)" name="map_point_picker" output="screen"
+              cmd="$(find-pkg-prefix map_generator)/lib/map_generator/map_point_picker.py $(var map)"/>
+</launch>

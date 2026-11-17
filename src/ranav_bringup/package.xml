@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ranav_bringup</name>
+  <version>0.1.0</version>
+  <description>
+    RaNAV bringup: the launch files, parameters and RViz configurations that start the system (FAST-LIO + SC-PGO on
+    the RoboSense Airy, TARE exploration, FAR inspection) from the other packages. No code.
+  </description>
+  <maintainer email="alejandro.enrique.barbi@gmail.com">abarbi</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- fast_lio_slam_launch.xml -->
+  <exec_depend>fast_lio</exec_depend>
+  <exec_depend>sc_pgo_ros2</exec_depend>
+  <exec_depend>rslidar_sdk</exec_depend>
+  <exec_depend>people_perception</exec_depend>
+  <exec_depend>autoware_multi_object_tracker</exec_depend>  <!-- fast_lio_slam_launch.xml tracker:=autoware -->
+  <exec_depend>map_generator</exec_depend>
+  <!-- explore_warehouse_launch.xml, far_planner_launch.xml (exits:=true also needs exit_inspection) -->
+  <exec_depend>tare_planner</exec_depend>
+  <exec_depend>terrain_analysis</exec_depend>
+  <exec_depend>terrain_analysis_ext</exec_depend>
+  <exec_depend>far_planner</exec_depend>
+  <exec_depend>graph_decoder</exec_depend>
+  <exec_depend>ranav_mission</exec_depend>
+  <!-- localization_launch.xml -->
+  <exec_depend>fast_lio_localization</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

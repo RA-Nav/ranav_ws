@@ -1,0 +1,57 @@
+[submodule "src/legged_control"]
+	path = src/legged_control
+	url = https://github.com/idra-lab/legged_control.git
+	branch = opti-pessi-acados-real
+[submodule "people_perception"]
+	path = src/people_perception
+	url = https://github.com/RA-Nav/people_perception
+[submodule "FAST_LIO_LOCALIZATION"]
+	path = src/FAST_LIO_LOCALIZATION
+	url = https://github.com/RA-Nav/FAST_LIO_LOCALIZATION
+[submodule "map_generator"]
+	path = src/map_generator
+	url = https://github.com/RA-Nav/map_generator
+[submodule "tare_planner"]
+	path = src/tare_planner
+	url = https://github.com/RA-Nav/tare_planner
+[submodule "autonomy_stack_go2"]
+	path = src/autonomy_stack_go2
+	url = https://github.com/RA-Nav/autonomy_stack_go2
+[submodule "FAST_LIO_SLAM_ROS2"]
+	path = src/FAST_LIO_SLAM_ROS2
+	url = https://github.com/RA-Nav/FAST_LIO_SLAM_ROS2
+[submodule "exit_inspection"]
+	path = src/exit_inspection
+	url = https://github.com/RA-Nav/exit_inspection
+[submodule "acados"]
+	path = third_party/acados
+	url = https://github.com/acados/acados.git
+[submodule "autoware_universe"]
+	path = third_party/autoware_universe
+	url = https://github.com/autowarefoundation/autoware_universe.git
+[submodule "autoware_msgs"]
+	path = third_party/autoware_msgs
+	url = https://github.com/autowarefoundation/autoware_msgs.git
+[submodule "cuda_blackboard"]
+	path = third_party/cuda_blackboard
+	url = https://github.com/autowarefoundation/cuda_blackboard.git
+[submodule "muSSP"]
+	path = third_party/muSSP
+	url = https://github.com/tier4/muSSP.git
+[submodule "ocs2"]
+	path = third_party/ocs2
+	url = https://github.com/idra-lab/ocs2.git
+	branch = ros2
+[submodule "ocs2_robotic_assets"]
+	path = third_party/ocs2_robotic_assets
+	url = https://github.com/leggedrobotics/ocs2_robotic_assets.git
+	branch = ros2
+[submodule "rslidar_msg"]
+	path = third_party/rslidar_msg
+	url = https://github.com/RoboSense-LiDAR/rslidar_msg.git
+[submodule "rslidar_sdk"]
+	path = third_party/rslidar_sdk
+	url = https://github.com/RoboSense-LiDAR/rslidar_sdk.git
+[submodule "negotiated"]
+	path = third_party/negotiated
+	url = https://github.com/osrf/negotiated.git

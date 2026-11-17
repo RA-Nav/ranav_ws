@@ -1,0 +1,30 @@
+<launch>
+  <!-- Localization in the map of an exploration, on top of fast_lio_slam_launch.xml (its FAST-LIO: /Odometry,
+       /cloud_registered in camera_init), which must be running. fast_lio_localization's launch file with the values of
+       the Aliengo and its Airy:
+       - map: optimized_map.pcd that the exploration left in save_data/ of map_generator (tare_finish_merge_map.py);
+       - fov, fov_far: the Airy is a 360 deg LiDAR (the map is cropped by distance only) with a 60 m range;
+       - init_from_odom: the initial pose is guessed from the legged estimator (/odom), so no pose is given by hand. The
+         map is the camera_init of the exploration: the guess holds if the exploration started with the robot standing
+         at the same spawn. It is retried every 2 s until ICP matches; /initialpose still overrides it.
+       TF: camera_init -> global_map (transform_fusion), below odom -> lio_map -> camera_init of FAST-LIO.
+       map_generator map_point_picker.py shows the robot in global_map while this runs. -->
+  <arg name="map" default="$(find-pkg-share map_generator)/save_data/optimized_map.pcd" description="Global map point cloud (.pcd)"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="rviz" default="true"/>
+
+  <!-- open3d lives in the .venv of the workspace (setup_ranav.sh venv), as ranav_mission tare_finish_merge_map.py
+       looks for it; python3 when it is missing -->
+  <let name="ws_python" value="$(find-pkg-prefix ranav_bringup)/../../.venv/bin/python"/>
+  <let name="python" value="$(eval &quot;'$(var ws_python)' if os.path.exists('$(var ws_python)') else 'python3'&quot; os)"/>
+
+  <include file="$(find-pkg-share fast_lio_localization)/launch/localization_launch.xml">
+    <arg name="map" value="$(var map)"/>
+    <arg name="fov" value="6.28"/>
+    <arg name="fov_far" value="60.0"/>
+    <arg name="init_from_odom" value="true"/>
+    <arg name="python" value="$(var python)"/>
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="rviz" value="$(var rviz)"/>
+  </include>
+</launch>

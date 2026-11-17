@@ -1,0 +1,20 @@
+# terrain_airy.yaml with the Airy in the slam box (legged_unitree_description urdf/common/slam_box.xacro), laid over it
+# by explore_warehouse_launch.xml and far_planner_launch.xml slam_box:=true: only the keys that follow the lidar height.
+# /Odometry (rslidar_lio, at the Airy) is 0.158 m above the base there instead of 0.066, so, by the rules of
+# terrain_airy.yaml:
+#  - sensorHeight: base height 0.39-0.40 when standing (the payload moves the CoM up ~8 mm) + 0.1576 = 0.55.
+#  - height window around the lidar: from 0.18 m below the floor (-0.73) to vehicleHeight 1.0 above it (0.45, 0.47
+#    with the 0.02 m that terrain_airy.yaml adds).
+#  - terrainUnderVehicle: the floor, -sensorHeight.
+/**/terrainAnalysis:
+    ros__parameters:
+        sensorHeight: 0.55
+        minRelZ: -0.73
+        maxRelZ: 0.47
+
+/**/terrainAnalysisExt:
+    ros__parameters:
+        sensorHeight: 0.55
+        lowerBoundZ: -0.73
+        upperBoundZ: 0.47
+        terrainUnderVehicle: -0.55

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ranav_mission</name>
+  <version>0.1.0</version>
+  <description>
+    RaNAV mission nodes: the goal bridge from TARE and FAR to OptiPessiController (C++), the obstacle bridge from
+    autoware_multi_object_tracker to OptiPessiController (C++), the unattended end of a TARE exploration (return
+    home, map merge), and the FAR inspection of picked points.
+  </description>
+  <maintainer email="alejandro.enrique.barbi@gmail.com">abarbi</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- opti_pessi_goal_bridge -->
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <build_depend>eigen</build_depend>
+
+  <!-- opti_pessi_obstacle_bridge (legged_controllers: its messages only) -->
+  <depend>autoware_perception_msgs</depend>
+  <depend>legged_controllers</depend>
+  <depend>std_msgs</depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>visibility_graph_msg</exec_depend>  <!-- far_inspection_goals.py -->
+  <exec_depend>map_generator</exec_depend>  <!-- make_merged_map.py, prune_far_graph.py (tare_finish_merge_map.py) -->
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

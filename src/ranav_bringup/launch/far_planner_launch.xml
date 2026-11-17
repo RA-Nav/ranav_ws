@@ -1,0 +1,151 @@
+<launch>
+  <!-- Terrain analysis + FAR planner on top of fast_lio_slam_launch.xml, with one rviz showing robot, LIO, terrain and plans.
+       inspection_launch.xml includes it, with FAST-LIO and the localization; alone, start it after
+       fast_lio_slam_launch.xml and localization_launch.xml.
+       Topics: /Odometry and /cloud_registered (FAST-LIO, camera_init) replace the autonomy stack's /state_estimation and /registered_scan.
+               With people_free, far_planner reads terrain maps of its own, made from /registered_scan_static (the scans
+               without the tracked people, people_perception dynamic_points_filter in fast_lio_slam_launch.xml), and
+               /terrain_map_ext with the people is not made (the rviz shows /terrain_map_ext_static).
+       TF:  odom -> lio_map -> camera_init -> map, all from FAST-LIO (fast_lio_slam_launch.xml)
+         odom -> lio_map: joins the legged estimator tree (odom -> base, /odom) to the FAST-LIO tree (/Odometry).
+                          FAST-LIO re-sets it on every /Odometry so that lio_base lands on base: the two
+                          estimators drift apart, and a static TF would put relayed goals off by that drift.
+         camera_init -> map: terrainAnalysis(Ext) stamp their clouds "map", but the points are in camera_init.
+       Graph: far_inspection_goals.py loads graph_file (far_planner's visibility graph, in the map frame) into
+              far_planner at the start, and saves far_planner's graph there after each inspection, so it grows with
+              every inspection. Both through graph_decoder (/read_file_dir, /save_file_dir), converted between the
+              map and far_planner's frame with the localization. No graph_file yet: far_planner builds its own.
+       Inspection: far_inspection_goals.py sends the points picked on optimized_map.pcd with
+              map_generator map_point_picker.py to far_planner as goals, one after the other. Nothing moves at the
+              launch: it starts on the Start inspection button of map_point_picker, which saves the points and sends
+              their file on /start_inspection (by hand, for goals_file:
+              ros2 topic pub -1 /start_inspection std_msgs/msg/String "{data: ''}"), and after the last point it
+              waits for the next start. auto_start:=true inspects goals_file at once, once the graph is loaded.
+              The points are converted into far_planner's frame with the localization too. Goals also come from
+              RViz as before.
+       graph_only: far_planner only builds its graph, next to TARE (explore_warehouse_launch.xml far:=true): no goal
+              bridge, no inspection goals, and its /way_point and /navigation_boundary go to /far_planner/..., away
+              from TARE's goal bridge and from TARE's viewpoint boundary (it subscribes /navigation_boundary). -->
+  <arg name="use_sim_time" default="true"/>
+  <arg name="terrain" default="true" description="Run terrainAnalysis, and terrainAnalysisExt unless people_free (false if already running)"/>
+  <arg name="rviz" default="true"/>
+  <arg name="far_config" default="default" description="Config file stem in far_planner/config"/>
+  <arg name="load_graph" default="true" description="Load graph_file into far_planner at the start (with inspection)"/>
+  <arg name="save_graph" default="true" description="Save far_planner's graph to graph_file after each inspection"/>
+  <arg name="graph_file" default="$(find-pkg-share map_generator)/save_data/warehouse.vgh" description="far_planner's visibility graph (.vgh), in the map frame"/>
+  <arg name="inspection" default="true" description="Send the points of goals_file to far_planner as goals, one after the other (false: goals only from RViz)"/>
+  <arg name="goals_file" default="$(find-pkg-share map_generator)/save_data/selected_points.yaml" description="Inspection points saved by map_point_picker (.yaml or .json): inspected with auto_start, or on a start command that names no file"/>
+  <arg name="auto_start" default="false" description="Inspect goals_file at once; false waits for the Start inspection button of map_point_picker (/start_inspection)"/>
+  <arg name="dwell_time" default="2.0" description="Seconds to stay at each inspection point before going to the next"/>
+  <arg name="loop" default="false" description="Start the inspection over after the last point"/>
+  <arg name="people_free" default="true" description="far_planner plans on terrain maps without the tracked people (/terrain_map_static, /terrain_map_ext_static): a person walking by leaves no wall in its graph and, next to the robot, does not make it lose its route and give the goal up. The goal bridge (/terrain_map) and OptiPessi (/opti_pessi/obstacles) still see the people. false: far_planner sees them as obstacles"/>
+  <arg name="waypoint" default="false" description="true: relay /way_point straight to OptiPessi (no obstacle check); false: opti_pessi_goal_bridge follows far_planner's route (/viz_path_topic): a goal 3 m ahead along it that keeps clearance from /terrain_map obstacles (else nearer along it, else detour, else stop)"/>
+  <arg name="graph_only" default="false" description="far_planner and graph_decoder only, to build the graph next to another planner (explore_warehouse_launch.xml far:=true): no goal bridge, no inspection goals, far_planner's /way_point and /navigation_boundary moved to /far_planner/way_point and /far_planner/navigation_boundary"/>
+  <arg name="slam_box" default="false" description="The Airy is the one in the slam box (slam_box:=true of the world/hw launch and of fast_lio_slam_launch.xml): the lidar height of the terrain nodes from terrain_airy_slam_box.yaml, over terrain_airy.yaml"/>
+  <let name="far_prefix" value=""/>
+  <let if="$(var graph_only)" name="far_prefix" value="/far_planner"/>
+  <!-- Lidar height of the terrain nodes, loaded after terrain_airy.yaml: terrain_airy.yaml again (Airy on the front of
+       the trunk), or the slam box one -->
+  <let name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+  <let if="$(var slam_box)" name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy_slam_box.yaml"/>
+
+  <!-- carveDyObs: no ghosts of moved obstacles in /terrain_map, see explore_warehouse_launch.xml -->
+  <node if="$(var terrain)" pkg="terrain_analysis" exec="terrainAnalysis" name="terrainAnalysis" output="screen">
+    <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+    <param from="$(var terrain_mount)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="carveDyObs" value="true"/>
+    <remap from="/state_estimation" to="/Odometry"/>
+    <remap from="/registered_scan" to="/cloud_registered"/>
+  </node>
+  <!-- /terrain_map_ext with the people is read by far_planner only, so it runs only when far_planner is not people_free
+       (the goal bridge reads /terrain_map) -->
+  <group if="$(var terrain)">
+    <node unless="$(var people_free)" pkg="terrain_analysis_ext" exec="terrainAnalysisExt" name="terrainAnalysisExt" output="screen">
+      <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+      <param from="$(var terrain_mount)"/>
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+      <remap from="/state_estimation" to="/Odometry"/>
+      <remap from="/registered_scan" to="/cloud_registered"/>
+    </node>
+  </group>
+
+  <!-- Terrain maps for far_planner only, from the scans without the tracked people, as in the exploration
+       (explore_warehouse_launch.xml). On the maps above, a person walking by became a wall in the graph
+       that the next routes went round, and a person next to the robot cut it off from the graph: far_planner found
+       no route and gave the goal up. Namespace far_static: the node names, which key terrain_airy.yaml, stay. -->
+  <node if="$(var people_free)" pkg="terrain_analysis" exec="terrainAnalysis" name="terrainAnalysis" namespace="far_static" output="screen">
+    <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+    <param from="$(var terrain_mount)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="carveDyObs" value="true"/>
+    <remap from="/state_estimation" to="/Odometry"/>
+    <remap from="/registered_scan" to="/registered_scan_static"/>
+    <remap from="/terrain_map" to="/terrain_map_static"/>
+  </node>
+  <node if="$(var people_free)" pkg="terrain_analysis_ext" exec="terrainAnalysisExt" name="terrainAnalysisExt" namespace="far_static" output="screen">
+    <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+    <param from="$(var terrain_mount)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="/state_estimation" to="/Odometry"/>
+    <remap from="/registered_scan" to="/registered_scan_static"/>
+    <remap from="/terrain_map" to="/terrain_map_static"/>
+    <remap from="/terrain_map_ext" to="/terrain_map_ext_static"/>
+  </node>
+  <let name="far_terrain_ext" value="/terrain_map_ext"/>
+  <let name="far_terrain" value="/terrain_map"/>
+  <let name="far_scan" value="/cloud_registered"/>
+  <let if="$(var people_free)" name="far_terrain_ext" value="/terrain_map_ext_static"/>
+  <let if="$(var people_free)" name="far_terrain" value="/terrain_map_static"/>
+  <let if="$(var people_free)" name="far_scan" value="/registered_scan_static"/>
+
+  <!-- name must stay far_planner: the yaml is keyed by node name -->
+  <node pkg="far_planner" exec="far_planner" name="far_planner" output="screen">
+    <param from="$(find-pkg-share far_planner)/config/$(var far_config).yaml"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="/odom_world" to="/Odometry"/>
+    <remap from="/terrain_cloud" to="$(var far_terrain_ext)"/>
+    <remap from="/scan_cloud" to="$(var far_terrain)"/>
+    <remap from="/terrain_local_cloud" to="$(var far_scan)"/>
+    <remap from="/way_point" to="$(var far_prefix)/way_point"/>
+    <remap from="/navigation_boundary" to="$(var far_prefix)/navigation_boundary"/>
+  </node>
+
+  <!-- graph_decoder reads/saves .vgh files (/read_file_dir, /save_file_dir): far_planner's own handlers are stubs -->
+  <node pkg="graph_decoder" exec="graph_decoder" name="graph_decoder" output="screen">
+    <param name="world_frame" value="map"/>
+    <param name="visual_scale_ratio" value="0.5"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+
+  <!-- graph_only: none of these, far_planner steers nothing -->
+  <group unless="$(var graph_only)">
+    <node if="$(var inspection)" pkg="ranav_mission" exec="far_inspection_goals.py" name="far_inspection_goals" output="screen">
+      <param name="goals_file" value="$(var goals_file)"/>
+      <param name="load_graph" value="$(var load_graph)"/>
+      <param name="save_graph" value="$(var save_graph)"/>
+      <param name="graph_file" value="$(var graph_file)"/>
+      <param name="dwell_time" value="$(var dwell_time)"/>
+      <param name="loop" value="$(var loop)"/>
+      <param name="auto_start" value="$(var auto_start)"/>
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+
+    <!-- FAR expects a local planner to steer towards /way_point, a carrot it pushes 2.5 m from the robot, past the next
+         graph node and off its route, and which jumps whenever the route changes. OptiPessi walks straight to its
+         goal, so the bridge follows the route FAR has planned instead (route_topic, the line FAR shows in rviz): the
+         goal is the point lookahead_distance ahead of the robot along it, checked against /terrain_map (nearer along
+         the route, a detour or a stop when something is in the way). /way_point is only used when FAR has no route. -->
+    <node pkg="ranav_mission" exec="opti_pessi_goal_bridge" name="opti_pessi_goal_bridge" output="screen">
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+      <param name="route_topic" value="/viz_path_topic"/>
+      <param name="relay_way_point" value="$(var waypoint)"/>
+    </node>
+  </group>
+
+  <!-- Publish Point tool sends the FAR goal (/goal_point); click on a cloud, not empty space -->
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="far_nav_rviz"
+    args="-d $(find-pkg-share ranav_bringup)/rviz/far_planner_nav.rviz">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+</launch>

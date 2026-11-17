@@ -1,0 +1,155 @@
+<launch>
+  <!-- The whole exploration in one command, after the simulation and the controller: FAST-LIO + SC-PGO + people
+       perception (fast_lio_slam_launch.xml, included), terrain analysis and TARE driving OptiPessiController, with one
+       rviz showing robot, LIO, terrain, exploration and OptiPessi plans. Start it with the robot standing still at the
+       spawn: FAST-LIO takes gravity and camera_init from the first IMU samples (OptiPessi stands until the first goal).
+       At the end tare_finish_merge_map.py brings the robot home, stops it, saves the merged map (and exits.yaml with
+       exits) in save_data/ of map_generator, and exits: the whole launch then shuts down (on_exit). With
+       merge_map:=false nothing is saved and nothing shuts down on its own.
+       Topics: TARE reads /lio_base_odometry (FAST-LIO's /Odometry at the base, frames.base_odom_topic, where the goal
+               bridge and the controller place the robot too; /Odometry is the lidar, 0.29 m ahead of the base: the
+               terrain maps keep it, terrainAnalysis' carveDyObs casts the scan rays from it),
+               /registered_scan_static (FAST-LIO /cloud_registered through people_perception
+               dynamic_points_filter, which fast_lio_slam_launch.xml starts), /terrain_map, /terrain_map_ext
+               (config/tare_aliengo.yaml) and publishes /way_point, /exploration_path, /global_path_full
+               (frame map). opti_pessi_goal_bridge does not relay /way_point: it sends /opti_pessi/goal (odom)
+               at the middle point between the robot and /way_point or, when that line is blocked, ahead along the
+               TARE path /way_point lies on (/exploration_path, else /global_path_full).
+       TF:  odom -> lio_map -> camera_init -> map, all from FAST-LIO (fast_lio_slam_launch.xml).
+       auto_start:=false waits for  ros2 topic pub -1 /start_exploration std_msgs/msg/Bool "{data: true}".
+       ros2 topic pub -1 /reset_waypoint std_msgs/msg/Empty "{}" stops the robot where it is (TARE waypoint = robot position).
+       far:=true also runs far_planner, only to build its visibility graph (far_planner_launch.xml graph_only): it
+       steers nothing (its /way_point goes to /far_planner/way_point). At the end the graph is saved next to the map as
+       warehouse.vgh and pruned with it: the graph the inspections (inspection_launch.xml) load and extend. -->
+  <arg name="lidar" default="sim" description="sim: the simulated Airy of Gazebo. real: the real Airy (its driver is started too), wall clock">
+    <choice value="sim"/>
+    <choice value="real"/>
+  </arg>
+  <arg name="slam_box" default="false" description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount for FAST-LIO and its height for the terrain nodes (fast_lio_slam_launch.xml, config/terrain_airy_slam_box.yaml)"/>
+  <arg name="use_sim_time" default="$(eval &quot;'$(var lidar)' == 'sim'&quot;)" description="Default: true with lidar:=sim, false with lidar:=real"/>
+  <arg name="people" default="true" description="Detect and track people and keep them out of the SC-PGO and TARE scans (fast_lio_slam_launch.xml)"/>
+  <arg name="tracker" default="people_tracker" description="With people: who tracks the people OptiPessi keeps out of: people_tracker (people_perception) or autoware (autoware_multi_object_tracker, with ranav_mission opti_pessi_obstacle_bridge), see fast_lio_slam_launch.xml"/>
+  <arg name="terrain" default="true" description="Run terrainAnalysis and terrainAnalysisExt (false if already running)"/>
+  <arg name="rviz" default="true"/>
+  <arg name="tare_config" default="$(find-pkg-share ranav_bringup)/config/tare_aliengo.yaml" description="TARE parameters file"/>
+  <arg name="auto_start" default="false" description="Explore at once; false waits for /start_exploration"/>
+  <arg name="waypoint" default="false" description="true: the goal is TARE's /way_point as it is, no obstacle check (opti_pessi_goal_bridge relay_way_point); false: the middle point between the robot and it, or its path round obstacles"/>
+  <arg name="merge_map" default="true" description="When TARE finishes exploring: the robot returns home (return_home), then stop TARE and the robot, merge the SC-PGO keyframes into map_name"/>
+  <arg name="return_home" default="true" description="With merge_map: when TARE finishes exploring it walks the robot back to where it started, and only then is it stopped and the map merged; false stops the robot where the exploration ends"/>
+  <arg name="return_home_timeout" default="600.0" description="Seconds given to the return home; after that the robot is stopped where it is and the map merged"/>
+  <arg name="map_name" default="optimized_map.pcd" description="Merged map file, in the SC-PGO save_directory"/>
+  <arg name="exits" default="false" description="Emergency exits (package exit_inspection): exit sign detector + exit_landmark_mapper during the exploration, exits.yaml in the SC-PGO save_directory at the end (needs merge_map)"/>
+  <arg name="exit_sweep" default="true" description="With exits: when TARE has finished, walk the robot to viewpoints of the walls the camera has not looked at from far enough (exit signs hang 2.2-2.5 m up, the D435i sees them from ~6.8 m), then home (exit_inspection exit_sign_sweep.py), instead of TARE's return home"/>
+  <arg name="exit_sign_model" default="$(find-pkg-prefix ranav_bringup)/../../models/exit_sign/exit_sign_736x1280.onnx" description="With exits: ONNX export of the exit sign detector (default: models/ of the workspace)"/>
+  <arg name="save_directory" default="$(find-pkg-share map_generator)/save_data/" description="SC-PGO save_directory: keyframes, merged map, FAR graph and exits.yaml go there (tests point it at a folder of their own)"/>
+  <arg name="far" default="false" description="Run far_planner and graph_decoder during the exploration, only to build far_planner's visibility graph (they steer nothing). At the end (needs merge_map) it is saved as warehouse.vgh in the SC-PGO save_directory and pruned with the merged map; it replaces the warehouse.vgh there, which the inspections load"/>
+
+  <!-- FAST-LIO, SC-PGO (it writes the keyframes the map is merged from) and people perception, without their own rviz.
+       In a group: the arguments of an include would otherwise stay set for the rest of this file (rviz). -->
+  <group>
+    <include file="$(find-pkg-share ranav_bringup)/launch/fast_lio_slam_launch.xml">
+      <arg name="lidar" value="$(var lidar)"/>
+      <arg name="slam_box" value="$(var slam_box)"/>
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="pgo" value="true"/>
+      <arg name="people" value="$(var people)"/>
+      <arg name="tracker" value="$(var tracker)"/>
+      <arg name="rviz" value="false"/>
+      <arg name="save_directory" value="$(var save_directory)"/>
+    </include>
+  </group>
+
+  <!-- carveDyObs (local patch): stored obstacle points that rays of the current scan now pass through are deleted, so
+       people and other things that moved away leave no ghosts in /terrain_map (and in /terrain_map_ext, which takes
+       /terrain_map within 4 m). clearDyObs stays off: its vertical FOV params are not tuned for the pitched Airy dome.
+       config/terrain_airy.yaml: floor prior and obstacle band for a lidar that does not see the floor
+       around the robot. -->
+  <!-- Lidar height of the terrain nodes, loaded after terrain_airy.yaml: terrain_airy.yaml again (Airy on the front of
+       the trunk), or the slam box one -->
+  <let name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+  <let if="$(var slam_box)" name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy_slam_box.yaml"/>
+  <node if="$(var terrain)" pkg="terrain_analysis" exec="terrainAnalysis" name="terrainAnalysis" output="screen">
+    <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+    <param from="$(var terrain_mount)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="carveDyObs" value="true"/>
+    <remap from="/state_estimation" to="/Odometry"/>
+    <remap from="/registered_scan" to="/cloud_registered"/>
+  </node>
+  <node if="$(var terrain)" pkg="terrain_analysis_ext" exec="terrainAnalysisExt" name="terrainAnalysisExt" output="screen">
+    <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
+    <param from="$(var terrain_mount)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <remap from="/state_estimation" to="/Odometry"/>
+    <remap from="/registered_scan" to="/cloud_registered"/>
+  </node>
+
+  <!-- name must stay tare_planner_node: the yaml is keyed by node name -->
+  <node pkg="tare_planner" exec="tare_planner_node" name="tare_planner_node" output="screen">
+    <param from="$(var tare_config)"/>
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="kAutoStart" value="$(var auto_start)"/>
+  </node>
+
+  <!-- The goal of OptiPessi from TARE's /way_point and paths (ranav_mission, C++); waypoint: /way_point as it is -->
+  <node pkg="ranav_mission" exec="opti_pessi_goal_bridge" name="opti_pessi_goal_bridge" output="screen">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+    <param name="relay_way_point" value="$(var waypoint)"/>
+  </node>
+
+  <!-- With far: far_planner and graph_decoder only build the graph (graph_only), on the terrain maps above
+       (terrain:=false there). people_free follows people: with people, a second terrain pair on the scans without
+       them (namespace far_static), so a person walking by leaves no wall in the graph. No rviz of its own. -->
+  <group if="$(var far)">
+    <include file="$(find-pkg-share ranav_bringup)/launch/far_planner_launch.xml">
+      <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="graph_only" value="true"/>
+      <arg name="terrain" value="false"/>
+      <arg name="slam_box" value="$(var slam_box)"/>
+      <arg name="people_free" value="$(var people)"/>
+      <arg name="rviz" value="false"/>
+    </include>
+  </group>
+
+  <!-- On /exploration_finish: with return_home, first waits until TARE has brought the robot back to where it stood
+       when this launch started (within 1.0 m, or return_home_timeout). Then SIGINT to tare_planner_node and the
+       goal bridges, a stop goal at the robot, then map_generator make_merged_map.py (.venv python, no viewer) on alaserPGO's
+       save_directory, which leaves out what moved (people the people filter missed: points other keyframes saw
+       through; they go to <map_name stem>_dynamic.pcd); log next to the map.
+       Wall-time node: flush_time waits for SC-PGO's 1 Hz pose file rewrite.
+       With far, graph_name warehouse.vgh: at the same time graph_decoder saves far_planner's graph there, then
+       far_planner and graph_decoder are stopped and the graph pruned with <map_name stem>_dynamic.pcd. Without far,
+       graph_name is empty: no graph to save.
+       on_exit: it exits once all is saved, and with it the whole launch (FAST-LIO, SC-PGO, terrain, rviz) shuts down. -->
+  <let name="finish_sweep" value="false"/>
+  <let if="$(var exits)" name="finish_sweep" value="$(var exit_sweep)"/>
+  <let name="graph_name" value=""/>
+  <let if="$(var far)" name="graph_name" value="warehouse.vgh"/>
+  <node if="$(var merge_map)" pkg="ranav_mission" exec="tare_finish_merge_map.py" name="tare_finish_merge_map" output="screen"
+        on_exit="shutdown">
+    <param name="map_name" value="$(var map_name)"/>
+    <param name="graph_name" value="$(var graph_name)"/>
+    <param name="return_home" value="$(var return_home)"/>
+    <param name="return_home_timeout" value="$(var return_home_timeout)"/>
+    <param name="exits" value="$(var exits)"/>
+    <param name="sweep" value="$(var finish_sweep)"/>
+  </node>
+
+  <!-- With exits: exit sign landmarks (exit_inspection/launch/exit_detection_launch.xml); the sightings go to SC-PGO's
+       save_directory, finalize_exits.py turns them into exits.yaml when the finish node above has merged the map. -->
+  <include if="$(var exits)" file="$(find-pkg-share exit_inspection)/launch/exit_detection_launch.xml">
+    <arg name="use_sim_time" value="$(var use_sim_time)"/>
+    <arg name="model" value="$(var exit_sign_model)"/>
+  </include>
+  <group if="$(var exits)">
+    <node if="$(var exit_sweep)" pkg="exit_inspection" exec="exit_sign_sweep.py" name="exit_sign_sweep" output="screen">
+      <param from="$(find-pkg-share exit_inspection)/config/exit_sign_sweep.yaml"/>
+      <param name="use_sim_time" value="$(var use_sim_time)"/>
+    </node>
+  </group>
+
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="tare_nav_rviz"
+    args="-d $(find-pkg-share ranav_bringup)/rviz/tare_planner_warehouse.rviz">
+    <param name="use_sim_time" value="$(var use_sim_time)"/>
+  </node>
+</launch>

@@ -1,0 +1,17 @@
+# Mount of the simulated Airy in the slam box (legged_unitree_description urdf/common/slam_box.xacro, robot.xacro
+# slam_box:=true), laid over fast_lio_airy.yaml by fast_lio_slam_launch.xml slam_box:=true: only the keys of the mount.
+# The Airy in the box is pitched 5 deg forward like the front one, so imu_R and extrinsic_R are those of
+# fast_lio_airy.yaml, Ry(5 deg); they are repeated so that this file holds the whole mount.
+# body_in_base: the rslidar origin (center of the Airy base) in base, from robot.xacro and slam_box.xacro:
+#   x = slam_box_mount_x + slam_box_airy_x = -0.25045 + 0.0037, z = slam_box_mount_z + slam_box_airy_z = 0.056 + 0.1016
+/**:
+    ros__parameters:
+        mapping:
+            extrinsic_R: [0.996195, 0.0, 0.087156,
+                          0.0,      1.0, 0.0,
+                          -0.087156, 0.0, 0.996195]
+            imu_R: [0.996195, 0.0, 0.087156,
+                    0.0,      1.0, 0.0,
+                    -0.087156, 0.0, 0.996195]
+        frames:
+            body_in_base: [-0.24675, 0.0, 0.1576]
