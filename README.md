@@ -12,7 +12,7 @@ FAST-LIO + SC-PGO mapping, lidar people perception, TARE exploration and far_pla
   - [Step by step](#step-by-step)
   - [Environment of each terminal](#environment-of-each-terminal)
   - [Rebuild after edits](#rebuild-after-edits)
-  - [Acados controller (optional)](#acados-controller-optional)
+  - [Acados controller](#acados-controller)
 - [Usage](#usage)
   - [A whole run with setup_ranav.sh](#a-whole-run-with-setup_ranavsh)
   - [Closed-loop scenarios (no Gazebo)](#1-scenarios-in-the-closed-loop-simulation)
@@ -100,7 +100,7 @@ Then open a new terminal and [set up its environment](#environment-of-each-termi
 | `./setup_ranav.sh sources` | Checks out the submodules not checked out yet (one that is stays as it is), writes the messages-only `third_party/livox_ros_driver2` that `fast_lio` needs, sets the Airy point type in `rslidar_sdk`; on the Jetson, the arm64 Unitree SDK and OR-Tools |
 | `./setup_ranav.sh venv` | `.venv` with open3d and onnxruntime |
 | `./setup_ranav.sh model` | The CenterPoint model in `models/lidar_centerpoint/v4.1/short_range` |
-| `./setup_ranav.sh build` | `colcon build` (Release) of the packages the launches start and their dependencies; without CUDA, the people detector packages are left out |
+| `./setup_ranav.sh build` | Builds bundled Acados as static libraries, then `colcon build` (Release) of the packages the launches start and their dependencies, including `acados_legged_controller`; without CUDA, the people detector packages are left out |
 | `./setup_ranav.sh env` | Writes `ranav_env.sh` and the Fast DDS profile `fastdds_shm_16mb.xml` |
 
 `./setup_ranav.sh --help` lists every command and option. `GIT_PROTOCOL=ssh` reaches GitHub over SSH instead of HTTPS.
@@ -140,7 +140,7 @@ export FASTRTPS_DEFAULT_PROFILES_FILE="$PWD/fastdds_shm_16mb.xml"
 | A script of `ranav_mission` or `map_generator`, the people_perception config / launch (copies too) | `colcon build --packages-select <package>` |
 | `opti_pessi_interface` C++ (the OCP, the obstacle slots, the closed loop) or the controller | `colcon build --packages-select opti_pessi_interface legged_controllers` |
 | A new file in `opti_pessi_interface/config` (edits of the existing ones need nothing: they are installed as links) | `colcon build --packages-select opti_pessi_interface` |
-| `acados_legged_controller` source or config | `colcon build --symlink-install --packages-select acados_legged_controller --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo` |
+| `acados_legged_controller` source or config | `colcon build --packages-select acados_legged_controller --cmake-args -DCMAKE_BUILD_TYPE=Release` |
 
 `opti_pessi_scenario.py` (`opti_pessi_interface`) and `kill_node_sigint_service.py` (`legged_controllers`) are
 installed as links: their edits need no rebuild.
@@ -156,21 +156,22 @@ cd ~/ranav_ws && colcon build --packages-select people_perception \
   --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-### Acados controller (optional)
+### Acados controller
 
-`setup_ranav.sh build` does not build it. `acados_legged_controller` needs Acados as a static library:
-`install_static/lib/libacados.a` or `static/lib/libacados.a` under `$ACADOS_SOURCE_DIR`, or under `$HOME/acados` when
-that is unset; without it, CMake skips the controller plugin. The workspace's Acados is `third_party/acados`: build it
-there, then
+`setup_ranav.sh build` builds the pinned `third_party/acados` source as static libraries in
+`install/acados_static`, then builds `acados_legged_controller` with the rest of the stack. Static linking keeps
+Acados' HPIPM and BLASFEO symbols isolated from the different versions used by OCS2.
+
+For a manual rebuild, source the workspace environment first; it sets `ACADOS_SOURCE_DIR` and `ACADOS_STATIC_DIR`:
 
 ```bash
-export ACADOS_SOURCE_DIR=~/ranav_ws/third_party/acados
-colcon build --symlink-install --packages-select acados_legged_controller --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
+source ~/ranav_ws/ranav_env.sh
+colcon build --packages-select acados_legged_controller --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-Keep Acados' `lib/` off `LD_LIBRARY_PATH` in the terminals of the stack ([Requirements](#requirements)). Changes to the
-Acados model or OCP definition also need `src/legged_control/acados_legged_controller/scripts/model_gen.py` run with
-the project's Acados Python environment before rebuilding; goals and obstacle inputs do not need regeneration.
+Changes to the Acados source need `./setup_ranav.sh build` to update its static libraries. Changes to the model or OCP
+definition also need `src/legged_control/acados_legged_controller/scripts/model_gen.py` run with the project's Acados
+Python environment before rebuilding; goals and obstacle inputs do not need regeneration.
 
 ---
 
@@ -619,7 +620,7 @@ robot, activates the controller, and opens RViz:
 ros2 launch acados_legged_controller sim_full.launch.py
 ```
 
-Building it: [Acados controller (optional)](#acados-controller-optional).
+Building it: [Acados controller](#acados-controller).
 
 Choose another Gazebo world with `world:=warehouse_world.world`. Wait for the controller to report `STANCE`, then send
 a goal in `odom` from another terminal; the first goal starts walking:

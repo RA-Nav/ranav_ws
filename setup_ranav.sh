@@ -98,6 +98,9 @@ if [ -f /etc/nv_tegra_release ] || dpkg-query -W nvidia-l4t-core >/dev/null 2>&1
 ROS_SETUP=/opt/ros/jazzy/setup.bash
 # robotpkg's pinocchio on x86_64; the same version built from source on aarch64, into the same prefix
 PINOCCHIO_DIR=/opt/openrobots/lib/cmake/pinocchio
+CASADI_CMAKE_DIR=/opt/openrobots/lib/cmake/casadi
+COAL_CMAKE_DIR=/opt/openrobots/lib/cmake/coal
+HPP_FCL_CMAKE_DIR=/opt/openrobots/lib/cmake/hpp-fcl
 PINOCCHIO_VERSION=v3.9.0
 # x86_64: the pinned toolkit; Jetson: JetPack's, behind the /usr/local/cuda link
 if [ "$ARCH" = aarch64 ]; then CUDA_DIR=/usr/local/cuda; else CUDA_DIR=/usr/local/cuda-13.0; fi
@@ -156,7 +159,7 @@ MODEL_FILES=(
 # Packages started by the launches; colcon builds them and everything they depend on.
 BUILD_TARGETS=(
   ranav_bringup ranav_mission map_generator
-  legged_control legged_controllers legged_gazebo legged_unitree_description opti_pessi_interface
+  legged_control legged_controllers legged_gazebo legged_unitree_description opti_pessi_interface acados_legged_controller
   people_perception tare_planner far_planner graph_decoder terrain_analysis terrain_analysis_ext
   fast_lio sc_pgo_ros2 fast_lio_localization
   legged_unitree_hw rslidar_sdk
@@ -247,6 +250,35 @@ compute_jobs() {
   cores=$(nproc)
   JOBS=${JOBS:-$((mem_gb / 2 < cores ? mem_gb / 2 : cores))}
   ((JOBS >= 1)) || JOBS=1
+}
+
+# Build the bundled Acados as static archives. The controller hides these symbols inside its wrapper library so that
+# Acados' HPIPM/BLASFEO cannot collide with the different versions built by OCS2.
+build_acados_static() {
+  local acados_src="$WS/third_party/acados"
+  local acados_build="$WS/build/acados_static"
+  local acados_install="$WS/install/acados_static"
+  [ -f "$acados_src/CMakeLists.txt" ] || die "Acados sources missing: ./setup_ranav.sh sources"
+  [ -f "$acados_src/external/blasfeo/CMakeLists.txt" ] && [ -f "$acados_src/external/hpipm/CMakeLists.txt" ] ||
+    die "Acados submodules missing: initialize third_party/acados recursively (./setup_ranav.sh sources)"
+
+  info "build bundled Acados static libraries"
+  run cmake -S "$acados_src" -B "$acados_build" -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="$acados_install" -DBUILD_SHARED_LIBS=OFF \
+    -DACADOS_WITH_SYSTEM_BLASFEO=OFF -DACADOS_WITH_OPENMP=OFF \
+    -DACADOS_WITH_QPOASES=OFF -DACADOS_WITH_DAQP=OFF -DACADOS_WITH_HPMPC=OFF -DACADOS_WITH_QORE=OFF \
+    -DACADOS_WITH_OOQP=OFF -DACADOS_WITH_QPDUNES=OFF -DACADOS_WITH_OSQP=OFF -DACADOS_WITH_CLARABEL=OFF \
+    -DACADOS_EXAMPLES=OFF -DACADOS_UNIT_TESTS=OFF -DACADOS_LINT=OFF -DACADOS_OCTAVE=OFF
+  run cmake --build "$acados_build" --parallel "$JOBS"
+  run cmake --install "$acados_build"
+  if [ "$DRY_RUN" != 1 ]; then
+    local lib
+    for lib in acados hpipm blasfeo; do
+      [ -f "$acados_install/lib/lib$lib.a" ] || die "Acados static library missing: $acados_install/lib/lib$lib.a"
+    done
+  fi
+  export ACADOS_SOURCE_DIR="$acados_src"
+  export ACADOS_STATIC_DIR="$acados_install"
 }
 
 # ---------------------------------------------------------------------------------------------------------------- deps
@@ -681,6 +713,8 @@ if [ -d $CUDA_DIR/bin ]; then
 fi
 export FASTRTPS_DEFAULT_PROFILES_FILE=$FASTDDS_PROFILE
 export ROS_LOG_DIR=$WS/log/ros
+export ACADOS_SOURCE_DIR=$WS/third_party/acados
+export ACADOS_STATIC_DIR=$WS/install/acados_static
 if [ -z "\${RANAV_ROS_ONLY:-}" ] && [ -f $WS/install/setup.bash ]; then source $WS/install/setup.bash; fi
 EOF
 }
@@ -737,13 +771,27 @@ cmd_build() {
 
   local workers
   compute_jobs
+  build_acados_static
   workers=$((JOBS >= 4 ? 2 : 1))
   export MAKEFLAGS="-j$((JOBS / workers))"
 
   # Release everywhere: one package left with an empty build type (-O0) is enough for its weak Eigen/CppAD symbols to
   # shadow the optimized ones in the controller process, and the MPC solve gets ~40x slower. pinocchio is the one in
   # /opt/openrobots (robotpkg, or built from source on aarch64), not on CMAKE_PREFIX_PATH.
-  local common=(--parallel-workers "$workers" --cmake-args -DCMAKE_BUILD_TYPE=Release "-Dpinocchio_DIR=$PINOCCHIO_DIR")
+  # Pinocchio's robotpkg config declares CasADi and Coal as dependencies even for consumers that do not use them.
+  # Use its hpp-fcl compatibility package too; mixing it with ROS's legacy hpp/fcl headers conflicts with Coal.
+  # Keep /opt/openrobots off CMAKE_PREFIX_PATH (it can shadow ROS/system libraries), and pass package dirs directly.
+  local cmake_args=(-DCMAKE_BUILD_TYPE=Release "-Dpinocchio_DIR=$PINOCCHIO_DIR")
+  if [ -f "$CASADI_CMAKE_DIR/casadi-config.cmake" ]; then
+    cmake_args+=("-Dcasadi_DIR=$CASADI_CMAKE_DIR")
+  fi
+  if [ -f "$COAL_CMAKE_DIR/coalConfig.cmake" ]; then
+    cmake_args+=("-Dcoal_DIR=$COAL_CMAKE_DIR")
+  fi
+  if [ -f "$HPP_FCL_CMAKE_DIR/hpp-fclConfig.cmake" ]; then
+    cmake_args+=("-Dhpp-fcl_DIR=$HPP_FCL_CMAKE_DIR")
+  fi
+  local common=(--parallel-workers "$workers" --cmake-args "${cmake_args[@]}")
   local skip=()
   if [ "$NO_CUDA" = 1 ] || ! have_cuda; then
     [ "$NO_CUDA" = 1 ] || warn "CUDA / TensorRT not found ($CUDA_DIR): the people detector is not built (./setup_ranav.sh cuda)"
