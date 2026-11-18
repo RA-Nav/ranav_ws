@@ -15,12 +15,14 @@ TOPICS=(
     /aft_pgo_map
     /aft_pgo_odom
     /aft_pgo_path
-    # OptiPessi
+    # OptiPessi goal and obstacles (bridges of ranav_mission)
     /opti_pessi/goal
     /opti_pessi/obstacles
-    /opti_pessi/plan
-    /opti_pessi/optimizedStateTrajectory   # MarkerArray: CoM Trajectory, EE Trajectories (feet), Future footholds, CoM Orientation
-    /opti_pessi_robot_mpc_observation      # ocs2 MpcObservation: measured state and input (numeric)
+    # Acados MPC: predicted CoM/feet/footholds, obstacles seen by the MPC, solver monitor and statistics
+    /mpc_predictions
+    /mpc_obstacles
+    /monitor
+    /mpc_stats
     /odom
     # RealSense camera
     /camera/camera/color/image_raw
