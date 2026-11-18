@@ -77,3 +77,5 @@ ranav_env.sh
 fastdds_shm_16mb.xml
 # messages-only livox_ros_driver2 (what fast_lio needs), written by setup_ranav.sh sources
 third_party/livox_ros_driver2/
+
+rosbag_*

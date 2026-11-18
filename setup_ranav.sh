@@ -248,7 +248,8 @@ compute_jobs() {
   local mem_gb cores
   mem_gb=$(awk '/MemTotal/ {print int($2 / 1048576)}' /proc/meminfo)
   cores=$(nproc)
-  JOBS=${JOBS:-$((mem_gb / 2 < cores ? mem_gb / 2 : cores))}
+  # A quarter of the cores (at most one job per 2 GB): the full count froze/crashed a 16-core 30 GB PC. JOBS=n overrides.
+  JOBS=${JOBS:-$((mem_gb / 2 < cores / 4 ? mem_gb / 2 : cores / 4))}
   ((JOBS >= 1)) || JOBS=1
 }
 
@@ -647,7 +648,8 @@ cmd_venv() {
   if [ ! -x "$VENV/bin/python" ] || ! "$VENV/bin/python" -c 'import open3d, onnxruntime' >/dev/null 2>&1; then
     run "$VENV/bin/python" -m pip install open3d==0.20.0 onnxruntime==1.30.0 scipy matplotlib
   fi
-  [ "$DRY_RUN" = 1 ] || "$VENV/bin/python" -c 'import numpy, open3d, onnxruntime; print("venv: numpy", numpy.__version__, "open3d", open3d.__version__, "onnxruntime", onnxruntime.__version__)'
+  # open3d 0.20 has no open3d.__version__: ask the installed metadata
+  [ "$DRY_RUN" = 1 ] || "$VENV/bin/python" -c 'import numpy, open3d, onnxruntime; from importlib.metadata import version; print("venv: numpy", numpy.__version__, "open3d", version("open3d"), "onnxruntime", onnxruntime.__version__)'
 }
 
 # --------------------------------------------------------------------------------------------------------------- model
@@ -795,7 +797,9 @@ cmd_build() {
   local skip=()
   if [ "$NO_CUDA" = 1 ] || ! have_cuda; then
     [ "$NO_CUDA" = 1 ] || warn "CUDA / TensorRT not found ($CUDA_DIR): the people detector is not built (./setup_ranav.sh cuda)"
-    skip=(--packages-skip "${CUDA_PACKAGES[@]}")
+    # ignore, not skip: a skipped package is still a dependency whose install/<pkg>/share/<pkg>/package.sh colcon needs
+    # (people_perception execs autoware_lidar_centerpoint); an ignored one is left out of the graph altogether
+    skip=(--packages-ignore "${CUDA_PACKAGES[@]}")
   fi
   local targets; read -ra targets <<<"$(build_targets_line)"
   info "colcon build ($workers packages at a time, MAKEFLAGS=$MAKEFLAGS): ${targets[*]} and their dependencies"
