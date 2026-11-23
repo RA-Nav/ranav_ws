@@ -62,3 +62,6 @@
 [submodule "negotiated"]
 	path = third_party/negotiated
 	url = https://github.com/osrf/negotiated.git
+[submodule "third_party/autoware_core"]
+	path = third_party/autoware_core
+	url = https://github.com/autowarefoundation/autoware_core.git

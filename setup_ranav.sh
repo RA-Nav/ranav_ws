@@ -129,12 +129,13 @@ REPOS=(
   "third_party/ocs2_robotic_assets|leggedrobotics/ocs2_robotic_assets|9feab348a1d9d10a0573ca43c7fc4ac2e4565cf2|public|"
   "third_party/autoware_msgs|autowarefoundation/autoware_msgs|1.13.0|public|autoware_perception_msgs"
   "third_party/autoware_universe|autowarefoundation/autoware_universe|8413d4174ca054d272ecf1f84e4c95dfa1f8cf1f|public|common/autoware_cuda_dependency_meta perception/autoware_lidar_centerpoint perception/autoware_multi_object_tracker perception/autoware_tensorrt_common perception/perception_utils sensing/autoware_cuda_utils"
-  "third_party/cuda_blackboard|autowarefoundation/cuda_blackboard|0.4.0|public|"
+  "third_party/autoware_core|autowarefoundation/autoware_core|8b3b197bb0462b2ad1c1ee5bae307d5f4d75f3bb|public|common/autoware_agnocast_wrapper"
+  "third_party/cuda_blackboard|autowarefoundation/cuda_blackboard|a4f330e5c228d713774450b0331b83b94c55a466|public|"
   "third_party/muSSP|tier4/muSSP|c79e98fd5e658f4f90c06d93472faa977bc873b9|public|"
   "third_party/negotiated|osrf/negotiated|eac198b55dcd052af5988f0f174902913c5f20e7|public|negotiated negotiated_interfaces"
   "third_party/rslidar_msg|RoboSense-LiDAR/rslidar_msg|fe8a95cb242bd294cc3d5e3422f2093fb49a56ee|public|"
   "third_party/rslidar_sdk|RoboSense-LiDAR/rslidar_sdk|8b4b4b7ff910799260347821084c59e1c73d50d5|public|"
-  "third_party/acados|acados/acados|51db6db146217e6624d7575f34e0421f28bc76a0|public|"
+  "third_party/acados|acados/acados|c15f50a9a95f40728dd8b36d7245fbaa21904206|public|"
 )
 # arm64 binaries (Jetson): Unitree SDK 3.3.1 for legged_unitree_hw, OR-Tools 9.8 for TARE (its README: replace the
 # bundled x86 include/ and lib/ with Google's arm64 release of the same version)
