@@ -5,24 +5,31 @@
 [submodule "people_perception"]
 	path = src/people_perception
 	url = https://github.com/RA-Nav/people_perception
+	branch = main
 [submodule "FAST_LIO_LOCALIZATION"]
 	path = src/FAST_LIO_LOCALIZATION
 	url = https://github.com/RA-Nav/FAST_LIO_LOCALIZATION
+	branch = main
 [submodule "map_generator"]
 	path = src/map_generator
 	url = https://github.com/RA-Nav/map_generator
+	branch = main
 [submodule "tare_planner"]
 	path = src/tare_planner
 	url = https://github.com/RA-Nav/tare_planner
+	branch = main
 [submodule "autonomy_stack_go2"]
 	path = src/autonomy_stack_go2
 	url = https://github.com/RA-Nav/autonomy_stack_go2
+	branch = main
 [submodule "FAST_LIO_SLAM_ROS2"]
 	path = src/FAST_LIO_SLAM_ROS2
 	url = https://github.com/RA-Nav/FAST_LIO_SLAM_ROS2
+	branch = main
 [submodule "exit_inspection"]
 	path = src/exit_inspection
 	url = https://github.com/RA-Nav/exit_inspection
+	branch = main
 [submodule "acados"]
 	path = third_party/acados
 	url = https://github.com/acados/acados.git
