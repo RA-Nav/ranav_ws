@@ -17,11 +17,11 @@
 [submodule "tare_planner"]
 	path = src/tare_planner
 	url = https://github.com/RA-Nav/tare_planner
-	branch = main
+	branch = humble-jazzy
 [submodule "autonomy_stack_go2"]
 	path = src/autonomy_stack_go2
 	url = https://github.com/RA-Nav/autonomy_stack_go2
-	branch = main
+	branch = foxy-humble
 [submodule "FAST_LIO_SLAM_ROS2"]
 	path = src/FAST_LIO_SLAM_ROS2
 	url = https://github.com/RA-Nav/FAST_LIO_SLAM_ROS2
