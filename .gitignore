@@ -79,3 +79,5 @@ fastdds_shm_16mb.xml
 third_party/livox_ros_driver2/
 
 rosbag_*
+
+datasets/
