@@ -1,6 +1,6 @@
 // opti_pessi_obstacle_bridge: the people autoware_multi_object_tracker tracks, as the obstacles of OptiPessiController
 // (/opti_pessi/obstacles). ranav_bringup fast_lio_slam_launch.xml starts it with tracker:=autoware, in place of the
-// obstacles people_tracker (people_perception) sends with tracker:=people_tracker.
+// obstacles people_tracker (lidar_perception) sends with tracker:=people_tracker.
 //
 //   tracks_topic     autoware_perception_msgs/TrackedObjects   the confirmed tracks of Autoware's tracker, in the
 //                    FAST-LIO odometry frame (camera_init), one message per detector message, with its stamp
@@ -12,7 +12,7 @@
 // opti_pessi_interface/config/task.info), keeps the closest obstacles for its slots, and takes them in odom only: they
 // are brought there with the latest TF (odom -> lio_map -> camera_init, from FAST-LIO while the legged estimator's
 // /odom runs), which only follows the slow drift between the two odometries. The range is measured from sensor_frame
-// (sensor_level, from people_perception detector_cloud_adapter) at the stamp of the tracks. Without either TF nothing
+// (sensor_level, from lidar_perception detector_cloud_adapter) at the stamp of the tracks. Without either TF nothing
 // is published, not an empty array: that would tell the controller there is nobody. Each message replaces the
 // obstacles of the previous one: a second publisher of obstacles_topic erases them.
 

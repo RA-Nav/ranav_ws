@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Install, build and start the RaNAV stack on Ubuntu 24.04 + ROS 2 Jazzy:
 #   legged_control         Aliengo in Gazebo (Harmonic, ros_gz) and the Opti-Pessi MPC controller
-#   people_perception      lidar people detector (Autoware CenterPoint, CUDA 13.0 + TensorRT 10.13), tracker, filter
+#   perception             lidar people detector (Autoware CenterPoint, CUDA 13.0 + TensorRT 10.13), tracker, filter
+#                          (lidar_perception), camera detector (camera_perception), emergency exits (exit_inspection)
 #   tare_planner           exploration (TARE) and its bridges to Opti-Pessi
 #   far_planner            route planner of the inspections (autonomy_stack_go2) + terrain_analysis(_ext), graph_decoder
 #   FAST_LIO_SLAM_ROS2     FAST-LIO + SC-PGO
@@ -51,9 +52,9 @@
 #
 # Options:
 #   --no-cuda               install/cuda/build: no CUDA, no TensorRT: start then runs the CPU people detector
-#   --cpu-detector          start: the people detector on the CPU (people_perception centerpoint_cpu.py, ONNX Runtime,
+#   --cpu-detector          start: the people detector on the CPU (lidar_perception centerpoint_cpu.py, ONNX Runtime,
 #                           +-12.8 m) even where the TensorRT one is built. Automatic where it is not (no NVIDIA GPU)
-#   --camera                sources/build: also the camera people detector opti_pessi_perception (YOLOs-CPP + ONNX Runtime)
+#   --camera                sources/build: also the camera people detector camera_perception (YOLOs-CPP + ONNX Runtime)
 #   --world NAME            start: warehouse (default) or empty_room (the 30 x 30 m room with people)
 #   --gui                   start: Gazebo with its GUI (default headless)
 #   --no-people             start: people:=false (no detector, the static clouds are the FAST-LIO ones)
@@ -71,7 +72,7 @@
 # GIT_PROTOCOL (https, default, or ssh: how GitHub is reached, see below), ROS_DOMAIN_ID.
 #
 # Repositories: all public. The submodules of the workspace come from the URLs in its .gitmodules; those of
-# legged_control (opti_pessi_interface, opti_pessi_perception) have ssh URLs, fetched over https unless
+# legged_control (opti_pessi_interface, acados_legged_controller) have ssh URLs, fetched over https unless
 # GIT_PROTOCOL=ssh (which needs an SSH key known to GitHub).
 #
 # WSL: the GPU driver is the Windows one (CUDA 13 needs driver >= 580). This script installs the toolkit only.
@@ -122,9 +123,8 @@ REPOS=(
   "src/tare_planner|RA-Nav/tare_planner|humble-jazzy|public|"
   "src/FAST_LIO_SLAM_ROS2|RA-Nav/FAST_LIO_SLAM_ROS2|main|public|"
   "src/FAST_LIO_LOCALIZATION|RA-Nav/FAST_LIO_LOCALIZATION|main|public|"
-  "src/people_perception|RA-Nav/people_perception|main|public|"
+  "src/perception|RA-Nav/perception|main|public|"
   "src/map_generator|RA-Nav/map_generator|main|public|"
-  "src/exit_inspection|RA-Nav/exit_inspection|main|public|"
   "third_party/ocs2|idra-lab/ocs2|ros2|public|"
   "third_party/ocs2_robotic_assets|leggedrobotics/ocs2_robotic_assets|9feab348a1d9d10a0573ca43c7fc4ac2e4565cf2|public|"
   "third_party/autoware_msgs|autowarefoundation/autoware_msgs|1.13.0|public|autoware_perception_msgs"
@@ -161,7 +161,7 @@ MODEL_FILES=(
 BUILD_TARGETS=(
   ranav_bringup ranav_mission map_generator
   legged_control legged_controllers legged_gazebo legged_unitree_description opti_pessi_interface acados_legged_controller
-  people_perception tare_planner far_planner graph_decoder terrain_analysis terrain_analysis_ext
+  lidar_perception tare_planner far_planner graph_decoder terrain_analysis terrain_analysis_ext
   fast_lio sc_pgo_ros2 fast_lio_localization
   legged_unitree_hw rslidar_sdk
 )
@@ -482,7 +482,7 @@ cmd_sources() {
   for r in "${REPOS[@]}"; do clone_repo "$r"; done
   if [ "$CAMERA" = 1 ]; then
     for r in "${CAMERA_REPOS[@]}"; do clone_repo "$r"; done
-    # header-only for opti_pessi_perception: its own CMakeLists builds only demos
+    # header-only for camera_perception: its own CMakeLists builds only demos
     local yolo="$WS/third_party/YOLOs-CPP"
     [ -e "$yolo/COLCON_IGNORE" ] || run touch "$yolo/COLCON_IGNORE"
     if [ ! -d "$yolo/$ORT_NAME" ]; then
@@ -639,7 +639,7 @@ EOF
 
 # ---------------------------------------------------------------------------------------------------------------- venv
 # FAST_LIO_LOCALIZATION and makeMergedMap.py (end of an exploration) run with this python: they need open3d; the CPU
-# people detector (people_perception centerpoint_cpu.py) needs onnxruntime. It sees the system packages (rclpy...).
+# people detector (lidar_perception centerpoint_cpu.py) needs onnxruntime. It sees the system packages (rclpy...).
 # Its numpy is 2.x, which breaks the apt scipy/matplotlib built for numpy 1: the venv gets its own copies of those.
 cmd_venv() {
   if [ ! -x "$VENV/bin/python" ]; then
@@ -759,7 +759,7 @@ check_ld_path() {
 # --------------------------------------------------------------------------------------------------------------- build
 build_targets_line() {
   local t=("${BUILD_TARGETS[@]}")
-  [ "$CAMERA" = 1 ] && t+=(opti_pessi_perception)
+  [ "$CAMERA" = 1 ] && t+=(camera_perception)
   echo "${t[*]}"
 }
 
@@ -799,7 +799,7 @@ cmd_build() {
   if [ "$NO_CUDA" = 1 ] || ! have_cuda; then
     [ "$NO_CUDA" = 1 ] || warn "CUDA / TensorRT not found ($CUDA_DIR): the people detector is not built (./setup_ranav.sh cuda)"
     # ignore, not skip: a skipped package is still a dependency whose install/<pkg>/share/<pkg>/package.sh colcon needs
-    # (people_perception execs autoware_lidar_centerpoint); an ignored one is left out of the graph altogether
+    # (lidar_perception execs autoware_lidar_centerpoint); an ignored one is left out of the graph altogether
     skip=(--packages-ignore "${CUDA_PACKAGES[@]}")
   fi
   local targets; read -ra targets <<<"$(build_targets_line)"

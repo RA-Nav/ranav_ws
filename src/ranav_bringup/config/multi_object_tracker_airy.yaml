@@ -4,7 +4,7 @@
   ros__parameters:
     # default tracker node parameters
     world_frame_id: camera_init  # RaNAV: map in Autoware. The FAST-LIO odometry frame, as people_tracker
-    ego_frame_id: sensor_level   # RaNAV: base_link in Autoware. people_perception detector_cloud_adapter
+    ego_frame_id: sensor_level   # RaNAV: base_link in Autoware. lidar_perception detector_cloud_adapter
 
     # publish-trigger
     publish_on_timer: false

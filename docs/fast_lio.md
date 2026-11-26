@@ -192,7 +192,7 @@ tree.
 - It needs no extra node and no extra thread. The `/odom` callback runs in the node's single-threaded executor and
   only appends to the history.
 
-**What uses it:** ranav_mission `opti_pessi_goal_bridge`, people_perception `people_tracker` (the people on
+**What uses it:** ranav_mission `opti_pessi_goal_bridge`, lidar_perception `people_tracker` (the people on
 `/opti_pessi/obstacles`), `opti_pessi_scenario.py --person`, `map_point_picker.py`.
 
 **Why not feed `/Odometry` into the Kalman filter instead.** `legged_estimation` already has an input for an external

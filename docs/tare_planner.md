@@ -76,7 +76,7 @@ With `rolling_occupancy_grid/kClearDynamicObstacle: true`:
   only with `kUseFrontier`, the only case in which the grid is updated.
 
 With the parameter `false` (the default), the rays stop at every `OCCUPIED` cell, as in the fork. `tare_aliengo.yaml`
-sets it `true`. TARE's scan, `/registered_scan_static`, is already filtered by people_perception. This handles the
+sets it `true`. TARE's scan, `/registered_scan_static`, is already filtered by lidar_perception. This handles the
 people the filter misses, and anything else that moves.
 
 ## Exploration path

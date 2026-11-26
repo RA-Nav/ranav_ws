@@ -25,13 +25,13 @@
        description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount (body_in_base, imu_R, extrinsic_R) from fast_lio_airy_slam_box.yaml (sim) or fast_lio_airy_real_slam_box.yaml (real), over config"/>
   <arg name="rviz" default="true"/>
   <arg name="pgo" default="true" description="Run SC-PGO loop closure (needs sc_pgo_ros2 built)"/>
-  <arg name="people" default="true" description="Detect and track people and keep them out of the SC-PGO and TARE scans (people_perception; a CenterPoint detector finds them in the points, see detector)"/>
+  <arg name="people" default="true" description="Detect and track people and keep them out of the SC-PGO and TARE scans (lidar_perception; a CenterPoint detector finds them in the points, see detector)"/>
   <arg name="centerpoint_model" default="$(find-pkg-prefix ranav_bringup)/../../models/lidar_centerpoint/v4.1/short_range"
        description="With people:=true: folder of the CenterPoint model (default: models/ of the workspace ranav_bringup is installed from)"/>
   <arg name="detector" default="auto"
-       description="With people:=true: centerpoint (TensorRT, needs CUDA), centerpoint_cpu (same model with ONNX Runtime on the CPU, people_perception centerpoint_cpu.py) or auto (centerpoint when autoware_lidar_centerpoint is installed, else centerpoint_cpu: a build with --no-cuda)"/>
+       description="With people:=true: centerpoint (TensorRT, needs CUDA), centerpoint_cpu (same model with ONNX Runtime on the CPU, lidar_perception centerpoint_cpu.py) or auto (centerpoint when autoware_lidar_centerpoint is installed, else centerpoint_cpu: a build with --no-cuda)"/>
   <arg name="tracker" default="people_tracker"
-       description="With people:=true, who tracks the people OptiPessi keeps out of: people_tracker (people_perception) or autoware (autoware_multi_object_tracker, with ranav_mission opti_pessi_obstacle_bridge). people_tracker takes the people out of the scans in both"/>
+       description="With people:=true, who tracks the people OptiPessi keeps out of: people_tracker (lidar_perception) or autoware (autoware_multi_object_tracker, with ranav_mission opti_pessi_obstacle_bridge). people_tracker takes the people out of the scans in both"/>
   <arg name="opti_pessi_obstacles" default="true"
        description="With people:=true: the tracked people go to OptiPessiController on /opti_pessi/obstacles. false when another node publishes that topic (yolo26_rgbd_detect)"/>
   <arg name="save_directory" default="$(find-pkg-share map_generator)/save_data/"
@@ -67,7 +67,7 @@
     <remap from="/velodyne_cloud_registered_local" to="/cloud_registered_body_static"/>
   </node>
 
-  <!-- people_perception (docs/people_perception.md). Its dynamic_points_filter republishes the FAST-LIO scans for
+  <!-- lidar_perception (docs/lidar_perception.md). Its dynamic_points_filter republishes the FAST-LIO scans for
        what accumulates them: /cloud_registered_body -> /cloud_registered_body_static for SC-PGO above,
        /cloud_registered -> /registered_scan_static for TARE (config/tare_aliengo.yaml) and for the terrain
        maps of far_planner (explore_warehouse_launch.xml, far_planner_launch.xml). Without it none of them gets scans. people:=false: unchanged. people:=true: without the tracked people (cloud adapter,
@@ -79,7 +79,7 @@
   <!-- In a group: the arguments of an include would otherwise stay set for the rest of this file (opti_pessi_obstacles
        below) -->
   <group>
-    <include file="$(find-pkg-share people_perception)/launch/people_perception_launch.xml">
+    <include file="$(find-pkg-share lidar_perception)/launch/lidar_perception_launch.xml">
       <arg name="people" value="$(var people)"/>
       <arg name="centerpoint_model" value="$(var centerpoint_model)"/>
       <arg name="detector" value="$(var detector)"/>
@@ -89,7 +89,7 @@
   </group>
 
   <!-- tracker:=autoware: autoware_multi_object_tracker (config/multi_object_tracker_airy.yaml) on the detections of
-       people_perception, and ranav_mission opti_pessi_obstacle_bridge sends the pedestrians it tracks to
+       lidar_perception, and ranav_mission opti_pessi_obstacle_bridge sends the pedestrians it tracks to
        OptiPessiController in place of people_tracker. people_tracker keeps running: dynamic_points_filter takes its
        tracks (tentative ones too) out of the scans. -->
   <group if="$(eval &quot;'$(var people)' == 'true' and '$(var tracker)' == 'autoware'&quot;)">

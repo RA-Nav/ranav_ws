@@ -2,9 +2,9 @@
 	path = src/legged_control
 	url = https://github.com/idra-lab/legged_control.git
 	branch = opti-pessi-acados-real
-[submodule "people_perception"]
-	path = src/people_perception
-	url = https://github.com/RA-Nav/people_perception
+[submodule "perception"]
+	path = src/perception
+	url = https://github.com/RA-Nav/perception
 	branch = main
 [submodule "FAST_LIO_LOCALIZATION"]
 	path = src/FAST_LIO_LOCALIZATION
@@ -25,10 +25,6 @@
 [submodule "FAST_LIO_SLAM_ROS2"]
 	path = src/FAST_LIO_SLAM_ROS2
 	url = https://github.com/RA-Nav/FAST_LIO_SLAM_ROS2
-	branch = main
-[submodule "exit_inspection"]
-	path = src/exit_inspection
-	url = https://github.com/RA-Nav/exit_inspection
 	branch = main
 [submodule "acados"]
 	path = third_party/acados

@@ -105,7 +105,7 @@ The check is **on by default**, so it changes the fork's behaviour. Very large v
 | `mapviz_filter_size` | `0.1` | Voxel size of `/aft_pgo_map` |
 
 Remaps: `/aft_mapped_to_init` becomes `/Odometry`, and `/velodyne_cloud_registered_local` becomes
-`/cloud_registered_body_static` (the FAST-LIO body scans without the tracked people, from people_perception).
+`/cloud_registered_body_static` (the FAST-LIO body scans without the tracked people, from lidar_perception).
 
 ## Known issues
 

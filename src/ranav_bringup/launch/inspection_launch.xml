@@ -16,7 +16,7 @@
   <arg name="slam_box" default="false" description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount for FAST-LIO and its height for the terrain nodes (fast_lio_slam_launch.xml, far_planner_launch.xml)"/>
   <arg name="use_sim_time" default="$(eval &quot;'$(var lidar)' == 'sim'&quot;)" description="Default: true with lidar:=sim, false with lidar:=real"/>
   <arg name="people" default="true" description="Detect and track people (fast_lio_slam_launch.xml): OptiPessi avoids them, far_planner plans without them (people_free)"/>
-  <arg name="tracker" default="people_tracker" description="With people: who tracks the people OptiPessi keeps out of: people_tracker (people_perception) or autoware (autoware_multi_object_tracker, with ranav_mission opti_pessi_obstacle_bridge), see fast_lio_slam_launch.xml"/>
+  <arg name="tracker" default="people_tracker" description="With people: who tracks the people OptiPessi keeps out of: people_tracker (lidar_perception) or autoware (autoware_multi_object_tracker, with ranav_mission opti_pessi_obstacle_bridge), see fast_lio_slam_launch.xml"/>
   <arg name="map" default="$(find-pkg-share map_generator)/save_data/optimized_map.pcd" description="Map of the exploration (.pcd), for the localization and the picker"/>
   <arg name="picker" default="true" description="Run the map point picker (http://localhost:8765)"/>
   <arg name="rviz" default="true"/>

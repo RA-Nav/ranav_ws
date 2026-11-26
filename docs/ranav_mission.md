@@ -7,7 +7,7 @@ inside the tare_planner and far_planner forks. [ranav_bringup](ranav_bringup.md)
 | Node | Started by | What it does | Was in |
 |---|---|---|---|
 | `opti_pessi_goal_bridge` (C++) | both mission launch files | Picks the OptiPessi goal from TARE's `/way_point` and paths or far_planner's route, keeping clearance from `/terrain_map`; with `relay_way_point` (`waypoint:=true`), relays `/way_point` as it is | tare_planner (as `tare_path_to_opti_pessi_goal.py` and `way_point_to_opti_pessi_goal.py`) |
-| `opti_pessi_obstacle_bridge` (C++) | `fast_lio_slam_launch.xml` with `tracker:=autoware` | Sends the pedestrians `autoware_multi_object_tracker` tracks to OptiPessi (`/opti_pessi/obstacles`), in place of `people_tracker` | people_perception (a trial branch, 2026-11-15) |
+| `opti_pessi_obstacle_bridge` (C++) | `fast_lio_slam_launch.xml` with `tracker:=autoware` | Sends the pedestrians `autoware_multi_object_tracker` tracks to OptiPessi (`/opti_pessi/obstacles`), in place of `people_tracker` | lidar_perception (a trial branch, 2026-11-15) |
 | `tare_finish_merge_map.py` | `explore_warehouse_launch.xml` (`merge_map`) | Ends an exploration unattended: return home, stop, merge the map, save and prune the FAR graph | tare_planner |
 | `far_inspection_goals.py` | `far_planner_launch.xml` (`inspection`) | Sends the picked inspection points to far_planner, one after the other | far_planner |
 
@@ -77,7 +77,7 @@ empty message means `goals_file`. It then:
 the pedestrians within `max_range` (10 m) of the sensor as `HUMAN` on `/opti_pessi/obstacles`, in `odom`, as
 `people_tracker` does with `tracker:=people_tracker`. The other classes of the road-trained detector are left out:
 the controller has no type for them, and in a warehouse they are shelves. Without the TF `odom <- camera_init`
-(FAST-LIO, once the legged estimator's `/odom` runs) or `camera_init <- sensor_level` (people_perception) at the
+(FAST-LIO, once the legged estimator's `/odom` runs) or `camera_init <- sensor_level` (lidar_perception) at the
 stamp of the tracks it publishes nothing, not an empty array. The conversion has no ROS graph
 (`include/ranav_mission/opti_pessi_obstacles.hpp`); `legged_controllers` gives it its messages only (`CMakeLists.txt`
 imports their targets without `find_package(legged_controllers)`, which would load the controller stack).

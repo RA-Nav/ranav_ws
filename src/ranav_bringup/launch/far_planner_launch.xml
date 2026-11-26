@@ -4,7 +4,7 @@
        fast_lio_slam_launch.xml and localization_launch.xml.
        Topics: /Odometry and /cloud_registered (FAST-LIO, camera_init) replace the autonomy stack's /state_estimation and /registered_scan.
                With people_free, far_planner reads terrain maps of its own, made from /registered_scan_static (the scans
-               without the tracked people, people_perception dynamic_points_filter in fast_lio_slam_launch.xml), and
+               without the tracked people, lidar_perception dynamic_points_filter in fast_lio_slam_launch.xml), and
                /terrain_map_ext with the people is not made (the rviz shows /terrain_map_ext_static).
        TF:  odom -> lio_map -> camera_init -> map, all from FAST-LIO (fast_lio_slam_launch.xml)
          odom -> lio_map: joins the legged estimator tree (odom -> base, /odom) to the FAST-LIO tree (/Odometry).

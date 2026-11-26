@@ -86,10 +86,17 @@ cd ~/ranav_ws
 - `install` runs the steps below in this order: `deps`, `cuda`, `sources`, `venv`, `model`, `build`, `env`. After a
   failure, run it again: each step skips what is already there.
 - `--no-cuda`: no CUDA and no TensorRT, the people detector then runs on the CPU. `--camera`: also the camera people
-  detector (`opti_pessi_perception`, YOLOs-CPP + ONNX Runtime). `--dry-run`: only print the commands.
+  detector (`camera_perception`, YOLOs-CPP + ONNX Runtime). `--dry-run`: only print the commands.
 - The first start with people detection takes about 2 minutes more: TensorRT builds its engines for the GPU at hand.
 
 Then open a new terminal and [set up its environment](#environment-of-each-terminal).
+
+**A checkout from before `src/perception`.** `people_perception`, `opti_pessi_perception` and `exit_inspection` are
+now the packages of `src/perception`. After the pull, move anything of your own out of the old folders (ignored files,
+such as `src/exit_inspection/security_exit_img`, exist only there), then delete `src/people_perception`,
+`src/exit_inspection` and `src/legged_control/opti_pessi_perception` if they are still there (two `exit_inspection`
+packages stop colcon), delete `build/` and `install/` of `people_perception` and `opti_pessi_perception`, and run
+`git submodule sync --recursive && git submodule update --init --recursive`.
 
 ### Step by step
 
@@ -137,7 +144,7 @@ export FASTRTPS_DEFAULT_PROFILES_FILE="$PWD/fastdds_shm_16mb.xml"
 | The Airy xacro / bridge / relay | `colcon build --packages-select legged_gazebo legged_unitree_description` |
 | `scenario_room.world`, `ActorPoseFollower.cpp` | `colcon build --packages-select legged_gazebo` |
 | A launch, config or rviz of `ranav_bringup` (FAST-LIO, terrain, TARE, Airy driver parameters; installed as copies: an edit does nothing until the rebuild) | `colcon build --packages-select ranav_bringup` |
-| A script of `ranav_mission` or `map_generator`, the people_perception config / launch (copies too) | `colcon build --packages-select <package>` |
+| A script of `ranav_mission` or `map_generator`, the lidar_perception config / launch (copies too) | `colcon build --packages-select <package>` |
 | `opti_pessi_interface` C++ (the OCP, the obstacle slots, the closed loop) or the controller | `colcon build --packages-select opti_pessi_interface legged_controllers` |
 | A new file in `opti_pessi_interface/config` (edits of the existing ones need nothing: they are installed as links) | `colcon build --packages-select opti_pessi_interface` |
 | `acados_legged_controller` source or config | `colcon build --packages-select acados_legged_controller --cmake-args -DCMAKE_BUILD_TYPE=Release` |
@@ -147,10 +154,10 @@ installed as links: their edits need no rebuild.
 
 `autoware_perception_msgs` is built from `third_party/autoware_msgs` (only that package of it is built).
 
-Build `people_perception` without the optional CUDA/TensorRT packages (CPU detector):
+Build `lidar_perception` without the optional CUDA/TensorRT packages (CPU detector):
 
 ```bash
-cd ~/ranav_ws && colcon build --packages-select people_perception \
+cd ~/ranav_ws && colcon build --packages-select lidar_perception \
   --packages-ignore autoware_lidar_centerpoint autoware_tensorrt_common autoware_cuda_utils \
     autoware_cuda_dependency_meta cuda_blackboard negotiated negotiated_interfaces perception_utils \
   --cmake-args -DCMAKE_BUILD_TYPE=Release
@@ -667,11 +674,11 @@ ros2 launch ranav_bringup fast_lio_slam_launch.xml rviz:=false people:=true
 - Start it with the robot standing still: FAST-LIO takes gravity and its frame from the first IMU samples.
 - On the Airy: `ranav_bringup/config/fast_lio_airy.yaml` (`lid_reliable`, `point_filter_num` 4),
   TF `... -> rslidar_lio -> lio_base`.
-- It also starts people_perception (`people_perception_launch.xml`). SC-PGO reads `/cloud_registered_body_static`
+- It also starts lidar_perception (`lidar_perception_launch.xml`). SC-PGO reads `/cloud_registered_body_static`
   and TARE `/registered_scan_static` from its `dynamic_points_filter`. **If the filter is down, neither gets scans.**
   far_planner builds its graph from `/registered_scan_static` too (terrain maps of its own, `/terrain_map_static`
   and `/terrain_map_ext_static`), in the exploration and in the inspections: walking people leave no walls in it.
-- The filter has no launch of its own, and `people_perception_launch.xml` must not be launched by hand next to this
+- The filter has no launch of its own, and `lidar_perception_launch.xml` must not be launched by hand next to this
   one.
 
 | Argument | Default | Effect |
@@ -706,7 +713,7 @@ Detector (with `people:=true`):
 - Needs CUDA 13.0 + TensorRT 10.13 (`./setup_ranav.sh cuda`) and their paths (`ranav_env.sh` sets them). The engines
   in the model folder were built for this GPU.
 - Not built (`setup_ranav.sh build --no-cuda`): `detector:=auto` runs the same model on the CPU,
-  `people_perception centerpoint_cpu.py`, with the python of `.venv` in the workspace (it needs onnxruntime).
+  `lidar_perception centerpoint_cpu.py`, with the python of `.venv` in the workspace (it needs onnxruntime).
 - Measured on the Gazebo actors, headless, 51 s:
 
   | | |
@@ -731,7 +738,7 @@ People as obstacles of the controller (with `people:=true`):
 ##### Camera people detector (optional)
 
 ```bash
-ros2 run opti_pessi_perception yolo26_rgbd_detect --ros-args -p use_sim_time:=true
+ros2 run camera_perception yolo26_rgbd_detect --ros-args -p use_sim_time:=true
 ```
 
 Not together with `people:=true`, unless `opti_pessi_obstacles:=false` (see the warning above).
@@ -762,18 +769,18 @@ python3 src/legged_control/legged_gazebo/test/airy_sim_check.py
 ros2 topic echo --once /rslidar_points --qos-reliability reliable --field header
 ```
 
-People perception (see `docs/people_perception.md`):
+People perception (see `docs/lidar_perception.md`):
 
 ```bash
-colcon test --packages-select people_perception --event-handlers console_direct+
+colcon test --packages-select lidar_perception --event-handlers console_direct+
 
 # sim and fast_lio_slam_launch.xml people:=false running: the static clouds are the FAST-LIO ones byte for byte, none
 # lost; same stamp on both clouds and /Odometry; same number of points in both clouds
-python3 src/people_perception/test/dynamic_points_filter_check.py
+python3 src/perception/lidar_perception/test/dynamic_points_filter_check.py
 
 # with people:=true: the static clouds are the FAST-LIO ones but for the points taken out, none lost, in order;
 # /perception/dynamic_points is exactly what is missing; a detector cloud (PointXYZIRC) and tracks for every scan
-python3 src/people_perception/test/dynamic_points_filter_check.py --people
+python3 src/perception/lidar_perception/test/dynamic_points_filter_check.py --people
 
 # clouds filtered with the tracks of their scan / of another scan (one the CPU detector skipped), clouds unfiltered
 # (detector down: the status is WARN), points removed, longest wait
@@ -807,7 +814,7 @@ With `people:=true` running:
 
 ```bash
 ros2 bag record -o <bag> /perception/detector/pointcloud /perception/detector/objects /tf /tf_static /Odometry
-ros2 run people_perception export_detector_dataset.py <bag> <out_dir> --every-seconds 0.5
+ros2 run lidar_perception export_detector_dataset.py <bag> <out_dir> --every-seconds 0.5
 ```
 
 - Output: `points/*.bin`, `labels/*.txt` (mmdetection3d custom dataset), `ImageSets`, `frames.csv`.

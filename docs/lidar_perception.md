@@ -1,10 +1,11 @@
-# people_perception
+# lidar_perception
 
-`src/people_perception` (own repository, AlexBarbi/people_perception), package `people_perception`. It finds the
-people in the lidar scans of FAST-LIO and tracks them. It is a project package, not a fork. Its README describes
-every node, parameter and check; this page is how it fits into the stack.
+`src/perception/lidar_perception`, package `lidar_perception` of the repository `RA-Nav/perception` (which also holds
+`camera_perception` and `exit_inspection`). It finds the people in the lidar scans of FAST-LIO and tracks them. It is
+a project package, not a fork. Its README describes every node, parameter and check; this page is how it fits into the
+stack.
 
-[ranav_bringup](ranav_bringup.md) `fast_lio_slam_launch.xml` includes `people_perception_launch.xml` (arguments
+[ranav_bringup](ranav_bringup.md) `fast_lio_slam_launch.xml` includes `lidar_perception_launch.xml` (arguments
 `people`, `detector`, `centerpoint_model`, `opti_pessi_obstacles`).
 
 ## Nodes
@@ -54,8 +55,8 @@ keeps reading the clouds with the people in them. A detector mistake can then di
 ## Build and test
 
 ```bash
-colcon build --packages-select people_perception
-colcon test --packages-select people_perception --event-handlers console_direct+
+colcon build --packages-select lidar_perception
+colcon test --packages-select lidar_perception --event-handlers console_direct+
 ```
 
 It builds after `legged_controllers` (its messages) and `autoware_perception_msgs`. The detector runs the model in
@@ -66,7 +67,7 @@ but it is not a warehouse people detector.
 
 `autoware_multi_object_tracker` (Autoware Universe) can track the people OptiPessi keeps out of instead of
 `people_tracker`: `fast_lio_slam_launch.xml tracker:=autoware` ([ranav_bringup](ranav_bringup.md)), with ranav_mission
-`opti_pessi_obstacle_bridge` ([ranav_mission](ranav_mission.md)). people_perception is unchanged: `people_tracker` keeps
+`opti_pessi_obstacle_bridge` ([ranav_mission](ranav_mission.md)). lidar_perception is unchanged: `people_tracker` keeps
 running and `dynamic_points_filter` takes its tracks out of the scans; it only sends no obstacles. On synthetic
 detections Autoware's tracker follows the people less and starts more tracks, with fewer false ones; its confidence
 thresholds are constants of its code (`~/tracker_trial/README.md`).

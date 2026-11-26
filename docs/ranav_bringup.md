@@ -4,7 +4,7 @@
 files, parameter files and RViz configurations. It contains no code. The nodes it starts come from:
 
 - the forks (fast_lio, sc_pgo_ros2, tare_planner, far_planner, terrain_analysis, fast_lio_localization);
-- the project packages ([ranav_mission](ranav_mission.md), [map_generator](map_generator.md), [people_perception](people_perception.md)).
+- the project packages ([ranav_mission](ranav_mission.md), [map_generator](map_generator.md), [lidar_perception](lidar_perception.md)).
 
 These files used to live inside the forks. Keeping them here leaves the forks with only their own fixes.
 
@@ -50,7 +50,7 @@ It starts:
   SC-PGO's `/aft_pgo_map`;
 - SC-PGO (`alaserPGO`), with `/aft_mapped_to_init` remapped to `/Odometry` and the keyframe scans taken from
   `/cloud_registered_body_static`, see [sc_pgo.md](sc_pgo.md);
-- `people_perception`. Its `dynamic_points_filter` republishes the FAST-LIO scans: `/cloud_registered_body` becomes
+- `lidar_perception`. Its `dynamic_points_filter` republishes the FAST-LIO scans: `/cloud_registered_body` becomes
   `/cloud_registered_body_static` for SC-PGO, and `/cloud_registered` becomes `/registered_scan_static` for TARE and
   FAR. With `people:=true` the tracked people are removed from those scans and sent to OptiPessi;
 - RViz (`fast_lio`'s own `rviz/fastlio.rviz`). Its CloudMap display shows `/Laser_map`, so it stays empty.
@@ -81,7 +81,7 @@ The whole exploration, started once the robot stands still at the spawn.
 | `opti_pessi_goal_bridge` (ranav_mission) | Turns TARE's output into OptiPessi goals in `odom`; with `waypoint:=true`, `/way_point` as it is |
 | `tare_finish_merge_map.py` (ranav_mission) | With `merge_map`: at the end, return home, stop, merge the map |
 | `far_planner_launch.xml` | With `far`: far_planner and graph_decoder only (`graph_only`), on the terrain maps above; with `people`, also the `far_static` terrain pair |
-| exit_inspection nodes | With `exits` (package not in this workspace) |
+| exit_inspection nodes | With `exits` (`src/perception/exit_inspection`) |
 
 **far.** By default far_planner does not run here, and its graph is built in the inspections. With `far:=true` it
 runs only to build its visibility graph, which is then ready and in the frame of the map before the first

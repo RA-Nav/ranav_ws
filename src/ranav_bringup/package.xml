@@ -15,7 +15,7 @@
   <exec_depend>fast_lio</exec_depend>
   <exec_depend>sc_pgo_ros2</exec_depend>
   <exec_depend>rslidar_sdk</exec_depend>
-  <exec_depend>people_perception</exec_depend>
+  <exec_depend>lidar_perception</exec_depend>
   <exec_depend>autoware_multi_object_tracker</exec_depend>  <!-- fast_lio_slam_launch.xml tracker:=autoware -->
   <exec_depend>map_generator</exec_depend>
   <!-- explore_warehouse_launch.xml, far_planner_launch.xml (exits:=true also needs exit_inspection) -->
