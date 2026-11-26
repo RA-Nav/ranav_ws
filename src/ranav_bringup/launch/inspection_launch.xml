@@ -13,6 +13,10 @@
     <choice value="sim"/>
     <choice value="real"/>
   </arg>
+  <arg name="robot_type" default="aliengo" description="Robot the Airy is mounted on (go2: Airy mount of FAST-LIO and lidar height of the terrain nodes from terrain_airy_go2[_slam_box].yaml). The one of the world/hw launch and of the controller">
+    <choice value="aliengo"/>
+    <choice value="go2"/>
+  </arg>
   <arg name="slam_box" default="false" description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount for FAST-LIO and its height for the terrain nodes (fast_lio_slam_launch.xml, far_planner_launch.xml)"/>
   <arg name="use_sim_time" default="$(eval &quot;'$(var lidar)' == 'sim'&quot;)" description="Default: true with lidar:=sim, false with lidar:=real"/>
   <arg name="people" default="true" description="Detect and track people (fast_lio_slam_launch.xml): OptiPessi avoids them, far_planner plans without them (people_free)"/>
@@ -24,6 +28,7 @@
   <group>
     <include file="$(find-pkg-share ranav_bringup)/launch/fast_lio_slam_launch.xml">
       <arg name="lidar" value="$(var lidar)"/>
+      <arg name="robot_type" value="$(var robot_type)"/>
       <arg name="slam_box" value="$(var slam_box)"/>
       <arg name="use_sim_time" value="$(var use_sim_time)"/>
       <arg name="pgo" value="false"/>
@@ -44,6 +49,7 @@
   <group>
     <include file="$(find-pkg-share ranav_bringup)/launch/far_planner_launch.xml">
       <arg name="use_sim_time" value="$(var use_sim_time)"/>
+      <arg name="robot_type" value="$(var robot_type)"/>
       <arg name="slam_box" value="$(var slam_box)"/>
       <arg name="rviz" value="$(var rviz)"/>
     </include>

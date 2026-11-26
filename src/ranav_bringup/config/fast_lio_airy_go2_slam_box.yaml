@@ -1,0 +1,9 @@
+# Mount of the Airy on the Go2 back, in the slam box, laid by fast_lio_slam_launch.xml robot_type:=go2 slam_box:=true over
+# fast_lio_airy[_real].yaml and fast_lio_airy[_real]_slam_box.yaml: the position only, the rotations are those of the files under it (5 deg pitch,
+# as on the Aliengo).
+# body_in_base: the rslidar origin (center of the Airy base) in base, from go2/const.xacro and slam_box.xacro:
+#   x = slam_box_mount_x + slam_box_airy_x = 0.0 + 0.0037, z = slam_box_mount_z + slam_box_airy_z = 0.064 + 0.1016
+/**:
+    ros__parameters:
+        frames:
+            body_in_base: [0.0037, 0.0, 0.1656]

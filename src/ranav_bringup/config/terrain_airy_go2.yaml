@@ -1,0 +1,19 @@
+# terrain_airy.yaml with the Go2 and the Airy on its head, laid over it by explore_warehouse_launch.xml and
+# far_planner_launch.xml robot_type:=go2 : only the keys that follow the lidar height. By the rules of
+# terrain_airy.yaml:
+#  - sensorHeight: base height 0.30 when standing (comHeight 0.30) + rslidar z 0.10 = 0.40.
+#  - height window around the lidar: from 0.18 m below the floor (-0.58) to vehicleHeight 1.0 above it, plus the
+#    0.02 m that terrain_airy.yaml adds (0.62).
+#  - terrainUnderVehicle: the floor, -sensorHeight.
+/**/terrainAnalysis:
+    ros__parameters:
+        sensorHeight: 0.40
+        minRelZ: -0.58
+        maxRelZ: 0.62
+
+/**/terrainAnalysisExt:
+    ros__parameters:
+        sensorHeight: 0.40
+        lowerBoundZ: -0.58
+        upperBoundZ: 0.62
+        terrainUnderVehicle: -0.40

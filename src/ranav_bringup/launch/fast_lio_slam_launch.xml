@@ -6,8 +6,9 @@
                                camera_init -> map                       (identity: camera_init points stamped "map")
                                camera_init -> aft_pgo                   (SC-PGO, loop-closed rslidar_lio)
        lio_map is the base frame when FAST-LIO started, lio_base the base pose FAST-LIO estimates: both offsets are
-       frames.body_in_base, the rslidar_joint xyz in robot.xacro; the rotation is in imu_R/extrinsic_R. Those of config
-       are the Airy on the front of the trunk; slam_box:=true lays the ones of the Airy in the slam box over them.
+       frames.body_in_base, the rslidar origin in base (robot.xacro); the rotation is in imu_R/extrinsic_R. Those of config
+       are the Airy on the front of the Aliengo; slam_box:=true lays the ones of the Airy in the slam box over them,
+       robot_type:=go2 then the Go2 position.
        odom -> lio_map joins the legged estimator tree (odom -> base, /odom) to the FAST-LIO one: re-set on every
        /Odometry so that lio_base lands on base (alignment.*). The two estimators drift apart, and a static TF would
        put relayed goals off by that drift. -->
@@ -21,6 +22,10 @@
   <arg name="config"
        default="$(find-pkg-share ranav_bringup)/config/$(eval &quot;'fast_lio_airy_real.yaml' if '$(var lidar)' == 'real' else 'fast_lio_airy.yaml'&quot;)"
        description="FAST-LIO parameters; by default the ones of the lidar: fast_lio_airy.yaml (sim) or fast_lio_airy_real.yaml (real)"/>
+  <arg name="robot_type" default="aliengo" description="Robot the Airy is mounted on (go2: its mount, fast_lio_airy_go2[_slam_box].yaml, over the others). The one of the world/hw launch and of the controller">
+    <choice value="aliengo"/>
+    <choice value="go2"/>
+  </arg>
   <arg name="slam_box" default="false"
        description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount (body_in_base, imu_R, extrinsic_R) from fast_lio_airy_slam_box.yaml (sim) or fast_lio_airy_real_slam_box.yaml (real), over config"/>
   <arg name="rviz" default="true"/>
@@ -49,9 +54,15 @@
   <let if="$(var slam_box)" name="mount_config"
        value="$(find-pkg-share ranav_bringup)/config/$(eval &quot;'fast_lio_airy_real_slam_box.yaml' if '$(var lidar)' == 'real' else 'fast_lio_airy_slam_box.yaml'&quot;)"/>
 
+  <!-- Go2: its position of the Airy (body_in_base), loaded last. Aliengo: mount_config again -->
+  <let name="robot_mount" value="$(var mount_config)"/>
+  <let if="$(equals $(var robot_type) go2)" name="robot_mount"
+       value="$(find-pkg-share ranav_bringup)/config/$(eval &quot;'fast_lio_airy_go2_slam_box.yaml' if '$(var slam_box)' == 'true' else 'fast_lio_airy_go2.yaml'&quot;)"/>
+
   <node pkg="fast_lio" exec="fastlio_mapping" name="laser_mapping" output="screen">
     <param from="$(var config)"/>
     <param from="$(var mount_config)"/>
+    <param from="$(var robot_mount)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 

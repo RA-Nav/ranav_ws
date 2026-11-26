@@ -41,6 +41,10 @@
   <arg name="people_free" default="true" description="far_planner plans on terrain maps without the tracked people (/terrain_map_static, /terrain_map_ext_static): a person walking by leaves no wall in its graph and, next to the robot, does not make it lose its route and give the goal up. The goal bridge (/terrain_map) and OptiPessi (/opti_pessi/obstacles) still see the people. false: far_planner sees them as obstacles"/>
   <arg name="waypoint" default="false" description="true: relay /way_point straight to OptiPessi (no obstacle check); false: opti_pessi_goal_bridge follows far_planner's route (/viz_path_topic): a goal 3 m ahead along it that keeps clearance from /terrain_map obstacles (else nearer along it, else detour, else stop)"/>
   <arg name="graph_only" default="false" description="far_planner and graph_decoder only, to build the graph next to another planner (explore_warehouse_launch.xml far:=true): no goal bridge, no inspection goals, far_planner's /way_point and /navigation_boundary moved to /far_planner/way_point and /far_planner/navigation_boundary"/>
+  <arg name="robot_type" default="aliengo" description="Robot the Airy is mounted on (go2: lidar height of the terrain nodes from terrain_airy_go2[_slam_box].yaml). The one of the world/hw launch and of the controller">
+    <choice value="aliengo"/>
+    <choice value="go2"/>
+  </arg>
   <arg name="slam_box" default="false" description="The Airy is the one in the slam box (slam_box:=true of the world/hw launch and of fast_lio_slam_launch.xml): the lidar height of the terrain nodes from terrain_airy_slam_box.yaml, over terrain_airy.yaml"/>
   <let name="far_prefix" value=""/>
   <let if="$(var graph_only)" name="far_prefix" value="/far_planner"/>
@@ -48,6 +52,8 @@
        the trunk), or the slam box one -->
   <let name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
   <let if="$(var slam_box)" name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy_slam_box.yaml"/>
+  <let if="$(equals $(var robot_type) go2)" name="terrain_mount"
+       value="$(find-pkg-share ranav_bringup)/config/$(eval &quot;'terrain_airy_go2_slam_box.yaml' if '$(var slam_box)' == 'true' else 'terrain_airy_go2.yaml'&quot;)"/>
 
   <!-- carveDyObs: no ghosts of moved obstacles in /terrain_map, see explore_warehouse_launch.xml -->
   <node if="$(var terrain)" pkg="terrain_analysis" exec="terrainAnalysis" name="terrainAnalysis" output="screen">

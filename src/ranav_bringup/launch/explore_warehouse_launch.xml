@@ -25,6 +25,10 @@
     <choice value="sim"/>
     <choice value="real"/>
   </arg>
+  <arg name="robot_type" default="aliengo" description="Robot the Airy is mounted on (go2: Airy mount of FAST-LIO and lidar height of the terrain nodes from terrain_airy_go2[_slam_box].yaml). The one of the world/hw launch and of the controller">
+    <choice value="aliengo"/>
+    <choice value="go2"/>
+  </arg>
   <arg name="slam_box" default="false" description="The Airy is the one in the slam box on the back of the trunk (slam_box:=true of the world/hw launch): its mount for FAST-LIO and its height for the terrain nodes (fast_lio_slam_launch.xml, config/terrain_airy_slam_box.yaml)"/>
   <arg name="use_sim_time" default="$(eval &quot;'$(var lidar)' == 'sim'&quot;)" description="Default: true with lidar:=sim, false with lidar:=real"/>
   <arg name="people" default="true" description="Detect and track people and keep them out of the SC-PGO and TARE scans (fast_lio_slam_launch.xml)"/>
@@ -49,6 +53,7 @@
   <group>
     <include file="$(find-pkg-share ranav_bringup)/launch/fast_lio_slam_launch.xml">
       <arg name="lidar" value="$(var lidar)"/>
+      <arg name="robot_type" value="$(var robot_type)"/>
       <arg name="slam_box" value="$(var slam_box)"/>
       <arg name="use_sim_time" value="$(var use_sim_time)"/>
       <arg name="pgo" value="true"/>
@@ -68,6 +73,8 @@
        the trunk), or the slam box one -->
   <let name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
   <let if="$(var slam_box)" name="terrain_mount" value="$(find-pkg-share ranav_bringup)/config/terrain_airy_slam_box.yaml"/>
+  <let if="$(equals $(var robot_type) go2)" name="terrain_mount"
+       value="$(find-pkg-share ranav_bringup)/config/$(eval &quot;'terrain_airy_go2_slam_box.yaml' if '$(var slam_box)' == 'true' else 'terrain_airy_go2.yaml'&quot;)"/>
   <node if="$(var terrain)" pkg="terrain_analysis" exec="terrainAnalysis" name="terrainAnalysis" output="screen">
     <param from="$(find-pkg-share ranav_bringup)/config/terrain_airy.yaml"/>
     <param from="$(var terrain_mount)"/>
@@ -105,6 +112,7 @@
       <arg name="use_sim_time" value="$(var use_sim_time)"/>
       <arg name="graph_only" value="true"/>
       <arg name="terrain" value="false"/>
+      <arg name="robot_type" value="$(var robot_type)"/>
       <arg name="slam_box" value="$(var slam_box)"/>
       <arg name="people_free" value="$(var people)"/>
       <arg name="rviz" value="false"/>

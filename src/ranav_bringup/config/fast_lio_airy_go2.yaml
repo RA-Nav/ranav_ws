@@ -1,0 +1,9 @@
+# Mount of the Airy on the Go2 head (front of the trunk), laid by fast_lio_slam_launch.xml robot_type:=go2 over
+# fast_lio_airy.yaml or fast_lio_airy_real.yaml: the position only, the rotations are those of the files under it (5 deg pitch,
+# as on the Aliengo).
+# body_in_base: the rslidar origin (center of the Airy base) in base, from robot.xacro and go2/const.xacro:
+#   x = lidar_mount_x = 0.15, z = lidar_mount_z = 0.10
+/**:
+    ros__parameters:
+        frames:
+            body_in_base: [0.15, 0.0, 0.10]
