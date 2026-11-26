@@ -104,7 +104,7 @@ packages stop colcon), delete `build/` and `install/` of `people_perception` and
 |---|---|
 | `./setup_ranav.sh deps` | apt: ROS 2 Jazzy desktop, Gazebo (ros_gz), ros2_control, build tools; pinocchio 3.9.0; the rosdep keys of the sources |
 | `./setup_ranav.sh cuda` | CUDA toolkit 13.0 + TensorRT 10.13.3 on x86_64, those of JetPack on the Jetson. Never a GPU driver |
-| `./setup_ranav.sh sources` | Checks out the submodules not checked out yet (one that is stays as it is), writes the messages-only `third_party/livox_ros_driver2` that `fast_lio` needs, sets the Airy point type in `rslidar_sdk`; on the Jetson, the arm64 Unitree SDK and OR-Tools |
+| `./setup_ranav.sh sources` | Checks out the submodules not checked out yet, puts the repositories of `src/` and `third_party/` on their branch at the tip of origin (one with local changes or commits, or on another branch, is left as it is), writes the messages-only `third_party/livox_ros_driver2` that `fast_lio` needs, sets the Airy point type in `rslidar_sdk`; on the Jetson, the arm64 Unitree SDK and OR-Tools |
 | `./setup_ranav.sh venv` | `.venv` with open3d and onnxruntime |
 | `./setup_ranav.sh model` | The CenterPoint model in `models/lidar_centerpoint/v4.1/short_range` |
 | `./setup_ranav.sh build` | Builds bundled Acados as static libraries, then `colcon build` (Release) of the packages the launches start and their dependencies, including `acados_legged_controller`; without CUDA, the people detector packages are left out |

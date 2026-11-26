@@ -29,18 +29,23 @@
 [submodule "acados"]
 	path = third_party/acados
 	url = https://github.com/acados/acados.git
+	branch = main
 [submodule "autoware_universe"]
 	path = third_party/autoware_universe
 	url = https://github.com/autowarefoundation/autoware_universe.git
+	branch = main
 [submodule "autoware_msgs"]
 	path = third_party/autoware_msgs
 	url = https://github.com/autowarefoundation/autoware_msgs.git
+	branch = main
 [submodule "cuda_blackboard"]
 	path = third_party/cuda_blackboard
 	url = https://github.com/autowarefoundation/cuda_blackboard.git
+	branch = main
 [submodule "muSSP"]
 	path = third_party/muSSP
 	url = https://github.com/tier4/muSSP.git
+	branch = tier4/main
 [submodule "ocs2"]
 	path = third_party/ocs2
 	url = https://github.com/idra-lab/ocs2.git
@@ -52,12 +57,20 @@
 [submodule "rslidar_msg"]
 	path = third_party/rslidar_msg
 	url = https://github.com/RoboSense-LiDAR/rslidar_msg.git
+	branch = master
 [submodule "rslidar_sdk"]
 	path = third_party/rslidar_sdk
 	url = https://github.com/RoboSense-LiDAR/rslidar_sdk.git
+	branch = main
 [submodule "negotiated"]
 	path = third_party/negotiated
 	url = https://github.com/osrf/negotiated.git
+	branch = master
 [submodule "third_party/autoware_core"]
 	path = third_party/autoware_core
 	url = https://github.com/autowarefoundation/autoware_core.git
+	branch = main
+[submodule "autoware_cuda"]
+	path = third_party/autoware_cuda
+	url = https://github.com/autowarefoundation/autoware_cuda.git
+	branch = main

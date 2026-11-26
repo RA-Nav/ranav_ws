@@ -31,8 +31,9 @@
 #                           (robotpkg on x86_64, from source on aarch64); rosdep keys of the sources (when cloned)
 #   cuda                    x86_64: CUDA toolkit 13.0 + TensorRT 10.13.3 (pinned and held); Jetson: JetPack's
 #                           (nvidia-jetpack). Never installs a GPU driver
-#   sources                 check out the submodules not checked out yet, then clone the repositories still missing
-#                           into src/ and third_party/; a folder already there is never touched
+#   sources                 check out the submodules not checked out yet, clone the repositories still missing into
+#                           src/ and third_party/, then put them on their branch at the tip of origin (one with local
+#                           changes or commits, or on another branch, is left as it is)
 #   venv                    .venv: python with open3d for the localization and the map merge
 #   model                   CenterPoint model (Hugging Face AutowareFoundation/lidar_centerpoint v4.1 short_range)
 #   build                   colcon build of the stack, Release
@@ -113,10 +114,10 @@ ENV_FILE="$WS/ranav_env.sh"
 FASTDDS_PROFILE="$WS/fastdds_shm_16mb.xml"
 
 # Repositories, as in .gitmodules: folder in the workspace (src/ ours, third_party/ the others) | GitHub repository |
-# branch, tag or commit | public or private | sparse checkout. Our forks follow their branch; third-party code is pinned
-# to the commit this stack was built and tested with (the one the workspace records for its submodule). Cloned only
-# where the folder is missing: a submodule of the workspace that is checked out is left as it is. The sparse checkout
-# applies to a submodule too, when sources checks it out.
+# branch | public or private | sparse checkout. All of them follow their branch (sync_sources), so a build can break
+# when upstream changes; the commits the workspace records for its submodules are only where they start from. The
+# submodules of third-party code stay at the commits it records for them. Cloned only where the folder is missing. The
+# sparse checkout applies to a submodule too, when sources checks it out.
 REPOS=(
   "src/legged_control|idra-lab/legged_control|opti-pessi-acados-real|public|"
   "src/autonomy_stack_go2|RA-Nav/autonomy_stack_go2|foxy-humble|public|"
@@ -126,16 +127,17 @@ REPOS=(
   "src/perception|RA-Nav/perception|main|public|"
   "src/map_generator|RA-Nav/map_generator|main|public|"
   "third_party/ocs2|idra-lab/ocs2|ros2|public|"
-  "third_party/ocs2_robotic_assets|leggedrobotics/ocs2_robotic_assets|9feab348a1d9d10a0573ca43c7fc4ac2e4565cf2|public|"
-  "third_party/autoware_msgs|autowarefoundation/autoware_msgs|1.13.0|public|autoware_perception_msgs"
-  "third_party/autoware_universe|autowarefoundation/autoware_universe|8413d4174ca054d272ecf1f84e4c95dfa1f8cf1f|public|common/autoware_cuda_dependency_meta perception/autoware_lidar_centerpoint perception/autoware_multi_object_tracker perception/autoware_tensorrt_common perception/perception_utils sensing/autoware_cuda_utils"
-  "third_party/autoware_core|autowarefoundation/autoware_core|8b3b197bb0462b2ad1c1ee5bae307d5f4d75f3bb|public|common/autoware_agnocast_wrapper"
-  "third_party/cuda_blackboard|autowarefoundation/cuda_blackboard|a4f330e5c228d713774450b0331b83b94c55a466|public|"
-  "third_party/muSSP|tier4/muSSP|c79e98fd5e658f4f90c06d93472faa977bc873b9|public|"
-  "third_party/negotiated|osrf/negotiated|eac198b55dcd052af5988f0f174902913c5f20e7|public|negotiated negotiated_interfaces"
-  "third_party/rslidar_msg|RoboSense-LiDAR/rslidar_msg|fe8a95cb242bd294cc3d5e3422f2093fb49a56ee|public|"
-  "third_party/rslidar_sdk|RoboSense-LiDAR/rslidar_sdk|8b4b4b7ff910799260347821084c59e1c73d50d5|public|"
-  "third_party/acados|acados/acados|c15f50a9a95f40728dd8b36d7245fbaa21904206|public|"
+  "third_party/ocs2_robotic_assets|leggedrobotics/ocs2_robotic_assets|ros2|public|"
+  "third_party/autoware_msgs|autowarefoundation/autoware_msgs|main|public|autoware_perception_msgs"
+  "third_party/autoware_universe|autowarefoundation/autoware_universe|main|public|common/autoware_cuda_dependency_meta perception/autoware_lidar_centerpoint perception/autoware_multi_object_tracker perception/autoware_tensorrt_common perception/perception_utils sensing/autoware_cuda_utils"
+  "third_party/autoware_core|autowarefoundation/autoware_core|main|public|common/autoware_agnocast_wrapper"
+  "third_party/autoware_cuda|autowarefoundation/autoware_cuda|main|public|"
+  "third_party/cuda_blackboard|autowarefoundation/cuda_blackboard|main|public|"
+  "third_party/muSSP|tier4/muSSP|tier4/main|public|"
+  "third_party/negotiated|osrf/negotiated|master|public|negotiated negotiated_interfaces"
+  "third_party/rslidar_msg|RoboSense-LiDAR/rslidar_msg|master|public|"
+  "third_party/rslidar_sdk|RoboSense-LiDAR/rslidar_sdk|main|public|"
+  "third_party/acados|acados/acados|main|public|"
 )
 # arm64 binaries (Jetson): Unitree SDK 3.3.1 for legged_unitree_hw, OR-Tools 9.8 for TARE (its README: replace the
 # bundled x86 include/ and lib/ with Google's arm64 release of the same version)
@@ -454,8 +456,8 @@ sparse_of() {  # <folder in the workspace>: the sparse checkout REPOS gives it (
 
 # The submodules of the workspace come at the commits it records. A clone without --recurse-submodules leaves their
 # folders empty, and an empty folder would pass for "already there" in clone_repo. Only the ones not checked out yet
-# are touched, at any depth (legged_control's opti_pessi_* too): one already checked out (on a branch, with local
-# changes...) is left as it is. A newly checked out one gets the sparse checkout of its REPOS entry.
+# are touched here, at any depth (legged_control's opti_pessi_* too): one already checked out (on a branch, with local
+# changes...) is left to sync_sources. A newly checked out one gets the sparse checkout of its REPOS entry.
 init_submodules() {
   [ -f "$WS/.gitmodules" ] && [ -e "$WS/.git" ] || return 0
   local paths p top rel sparse
@@ -474,12 +476,95 @@ init_submodules() {
   done
 }
 
+# The repositories follow their branch: after a download they are on it, at the tip of origin, not detached at the
+# recorded commit. Nothing is lost: a repository with local changes, on another branch or with commits origin lacks
+# is left as it is, and branches are only fast-forwarded.
+sync_repo() {  # <folder in the workspace> <branch>
+  local dir=$1 branch=$2 d="$WS/$1" remote="origin/$2" cur pristine=""
+  [ -e "$d/.git" ] || return 0
+  if [ "$DRY_RUN" = 1 ]; then echo "+ git -C $d: switch to $branch, fast-forward to $remote"; return; fi
+  cur=$(git -C "$d" branch --show-current)
+  if [ -n "$cur" ] && [ "$cur" != "$branch" ]; then warn "$dir is on $cur, not $branch: left as it is"; return; fi
+  # a nested submodule at another commit is not a change of this repository: it is synced on its own
+  if [ -n "$(git -C "$d" status --porcelain --untracked-files=no --ignore-submodules=all)" ]; then
+    warn "$dir has local changes: not updated"; return
+  fi
+  # its submodules too are as recorded
+  [ -n "$(git -C "$d" status --porcelain --untracked-files=no)" ] || pristine=1
+  if ! retry git_cmd -C "$d" fetch --quiet origin "+refs/heads/$branch:refs/remotes/$remote"; then
+    warn "$dir: cannot fetch $branch: not updated"; return
+  fi
+  if [ -z "$cur" ]; then
+    if [ -z "$(git -C "$d" branch -r --contains HEAD)" ]; then
+      warn "$dir: detached HEAD with commits that are not on origin: left as it is"; return
+    fi
+  fi
+  if git -C "$d" show-ref --verify --quiet "refs/heads/$branch"; then
+    if ! git -C "$d" merge-base --is-ancestor "$branch" "$remote" &&
+      ! git -C "$d" merge-base --is-ancestor "$remote" "$branch"; then
+      warn "$dir: $branch and $remote have diverged: left as it is"; return
+    fi
+    if ! git -C "$d" switch --quiet "$branch"; then warn "$dir: cannot switch to $branch: not updated"; return; fi
+  elif ! git -C "$d" switch --quiet --create "$branch" --track "$remote"; then
+    warn "$dir: cannot create $branch: not updated"; return
+  fi
+  if ! git -C "$d" merge --quiet --ff-only "$remote"; then warn "$dir: cannot fast-forward $branch"; return; fi
+  # third-party code is built with the submodules its new commit records, whatever branch its .gitmodules names (acados)
+  if [[ "$dir" = third_party/* ]] && [ -f "$d/.gitmodules" ]; then
+    if [ -z "$pristine" ]; then
+      warn "$dir: submodules not at the recorded commits: left as they are (git submodule update --init --recursive)"
+    elif ! retry git_cmd -C "$d" submodule --quiet update --init --recursive; then
+      warn "$dir: cannot update its submodules"
+    fi
+  fi
+  info "$dir on $branch at $(git -C "$d" rev-parse --short HEAD)"
+}
+
+# configure_rslidar's edit is not a local change: undone here when it is the only one, made again after the update.
+unconfigure_rslidar() {
+  local d="$WS/third_party/rslidar_sdk" f=CMakeLists.txt
+  [ "$DRY_RUN" != 1 ] && [ -e "$d/.git" ] || return 0
+  git -C "$d" diff --quiet -- "$f" && return 0
+  if cmp -s <(git -C "$d" show "HEAD:$f" | sed "${RSLIDAR_SED[@]}") "$d/$f"; then git -C "$d" checkout --quiet -- "$f"; fi
+}
+
+# A repository and, at any depth, its submodules that have a branch in its .gitmodules (legged_control's opti_pessi_*).
+sync_tree() {  # <folder in the workspace> <branch>
+  sync_repo "$1" "$2"
+  local f="$WS/$1/.gitmodules" entry key path branch
+  local entries=()
+  [ -f "$f" ] || return 0
+  mapfile -t entries < <(git config -f "$f" --get-regexp '\.path$')
+  for entry in "${entries[@]}"; do
+    read -r key path <<<"$entry"
+    branch=$(git config -f "$f" "${key%.path}.branch") || continue
+    # one the update of its repository has just added
+    if [ ! -e "$WS/$1/$path/.git" ] && [ "$DRY_RUN" != 1 ]; then
+      retry git_cmd -C "$WS/$1" submodule update --init --recursive -- "$path"
+    fi
+    sync_tree "$1/$path" "$branch"
+  done
+}
+
+sync_sources() {
+  local r dir path ref access sparse
+  unconfigure_rslidar
+  for r in "${REPOS[@]}"; do
+    IFS='|' read -r dir path ref access sparse <<<"$r"
+    case "$dir" in
+      src/*) sync_tree "$dir" "$ref" ;;
+      *) sync_repo "$dir" "$ref" ;;
+    esac
+  done
+}
+
 cmd_sources() {
   command -v git >/dev/null || die "git missing: ./setup_ranav.sh deps"
   mkdir -p "$WS/src" "$WS/third_party"
   init_submodules
   local r
   for r in "${REPOS[@]}"; do clone_repo "$r"; done
+  sync_sources  # before files of the repositories are changed below (rslidar_sdk, arm64_binaries)
   if [ "$CAMERA" = 1 ]; then
     for r in "${CAMERA_REPOS[@]}"; do clone_repo "$r"; done
     # header-only for camera_perception: its own CMakeLists builds only demos
@@ -502,13 +587,13 @@ cmd_sources() {
 
 # rslidar_sdk sets its point type with a plain set() and the IMU parse off: the Airy needs XYZIRT (ring and time per
 # point, what FAST-LIO and the simulated Airy use) and its IMU (/rslidar_imu_data feeds FAST-LIO). Edited in the clone.
+RSLIDAR_SED=(-e 's/^set(POINT_TYPE XYZI)$/set(POINT_TYPE XYZIRT)/' -e 's/^option(ENABLE_IMU_DATA_PARSE \(.*\) OFF)$/option(ENABLE_IMU_DATA_PARSE \1 ON)/')
 configure_rslidar() {
   local f="$WS/third_party/rslidar_sdk/CMakeLists.txt"
   [ -f "$f" ] || return 0
   if grep -qx 'set(POINT_TYPE XYZIRT)' "$f" && grep -qE '^option\(ENABLE_IMU_DATA_PARSE .* ON\)$' "$f"; then return; fi
   info "rslidar_sdk: POINT_TYPE XYZIRT, ENABLE_IMU_DATA_PARSE ON"
-  run sed -i -e 's/^set(POINT_TYPE XYZI)$/set(POINT_TYPE XYZIRT)/' \
-    -e 's/^option(ENABLE_IMU_DATA_PARSE \(.*\) OFF)$/option(ENABLE_IMU_DATA_PARSE \1 ON)/' "$f"
+  run sed -i "${RSLIDAR_SED[@]}" "$f"
   [ "$DRY_RUN" = 1 ] || { grep -qx 'set(POINT_TYPE XYZIRT)' "$f" && grep -qE '^option\(ENABLE_IMU_DATA_PARSE .* ON\)$' "$f"; } ||
     die "could not set the point type / IMU parse in $f: edit it by hand"
 }
