@@ -4,7 +4,7 @@
 	branch = opti-pessi-acados-real
 [submodule "perception"]
 	path = src/perception
-	url = https://github.com/RA-Nav/people_perception
+	url = https://github.com/RA-Nav/perception
 	branch = main
 [submodule "FAST_LIO_LOCALIZATION"]
 	path = src/FAST_LIO_LOCALIZATION
